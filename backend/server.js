@@ -7,6 +7,14 @@ const app = express();
 const port = 5000;
 const slugify = require("slugify")
 
+// 🔐 Firebase Admin SDK 설정 (맨 위 상단)
+const admin = require("firebase-admin");
+const serviceAccount = require("./firebase-service-key.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
 // 미들웨어 설정
 app.use(cors());
 app.use(express.json());
@@ -33,7 +41,31 @@ app.listen(port, () => {
   console.log(`🚀 서버 실행중: http://localhost:${port}`);
 });
 
+// ✅ Firebase 토큰 인증 미들웨어
+function authenticateFirebaseToken(req, res, next) {
+  const authHeader = req.headers.authorization;
 
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "인증 토큰이 없습니다." });
+  }
+
+  const idToken = authHeader.split("Bearer ")[1];
+
+  admin
+    .auth()
+    .verifyIdToken(idToken)
+    .then((decodedToken) => {
+      req.user = {
+        uid: decodedToken.uid,
+        email: decodedToken.email,
+      };
+      next();
+    })
+    .catch((error) => {
+      console.error("토큰 검증 실패:", error);
+      return res.status(401).json({ message: "유효하지 않은 토큰입니다." });
+    });
+}
 
 // 리뷰 저장 API
 app.post("/api/reviews", (req, res) => {
@@ -266,4 +298,270 @@ app.post("/api/artists", (req, res) => {
       });
     }
   );
+
+// 주석 조회 API
+app.get("/api/song-annotations", (req, res) => {
+  const { song_id, line } = req.query;
+
+  if (!song_id || !line) {
+    return res.status(400).json({ message: "필수 파라미터 누락" });
+  }
+
+  const decodedLine = decodeURIComponent(line); // 혹시 %20 같은 인코딩 대비
+
+  // line이 가사 전체에서 어디에 위치하는지 찾아서 시작/끝 인덱스 계산
+  const lyricsQuery = "SELECT lyrics FROM songs WHERE id = ?";
+
+  db.query(lyricsQuery, [song_id], (err, results) => {
+    if (err) return res.status(500).json({ message: "가사 불러오기 실패" });
+    if (results.length === 0) return res.status(404).json({ message: "곡 없음" });
+
+    const lyrics = results[0].lyrics;
+    const start_char = lyrics.indexOf(decodedLine);
+    const end_char = start_char + decodedLine.length;
+
+    if (start_char === -1) {
+      return res.status(404).json({ message: "문장을 가사에서 찾을 수 없음" });
+    }
+
+    const query = `
+      SELECT a.*, u.nickname
+      FROM song_annotations a
+      JOIN users u ON a.user_id = u.id
+      WHERE a.song_id = ? AND a.start_char = ? AND a.end_char = ?
+      ORDER BY a.type, a.likes DESC, a.created_at DESC
+    `;
+
+    db.query(query, [song_id, start_char, end_char], (err, results) => {
+      if (err) {
+        console.error("주석 조회 실패:", err);
+        return res.status(500).json({ message: "DB 오류" });
+      }
+      res.json(results);
+    });
+  });
 });
+
+// 주석 등록 API
+app.post("/api/song-annotations", authenticateFirebaseToken, (req, res) => {
+  const { song_id, line, content, type } = req.body;
+  const userEmail = req.user.email;
+
+  if (!song_id || !line || !content || !type) {
+    return res.status(400).json({ message: "필수 항목 누락" });
+  }
+
+  const decodedLine = decodeURIComponent(line);
+
+  const lyricsQuery = "SELECT lyrics FROM songs WHERE id = ?";
+  db.query(lyricsQuery, [song_id], (err, results) => {
+    if (err) return res.status(500).json({ message: "가사 조회 실패" });
+    if (results.length === 0) return res.status(404).json({ message: "곡 없음" });
+
+    const lyrics = results[0].lyrics;
+    const start_char = lyrics.indexOf(decodedLine);
+    const end_char = start_char + decodedLine.length;
+
+    if (start_char === -1) {
+      return res.status(400).json({ message: "해당 문장을 가사에서 찾을 수 없음" });
+    }
+
+    // 🔍 이메일로 user_id 조회
+    const getUserQuery = "SELECT id FROM users WHERE email = ?";
+    db.query(getUserQuery, [userEmail], (err, results) => {
+      if (err || results.length === 0) {
+        return res.status(401).json({ message: "유저 인증 실패 또는 없음" });
+      }
+
+      const userId = results[0].id;
+
+      const insertQuery = `
+        INSERT INTO song_annotations (song_id, user_id, start_char, end_char, content, type)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `;
+      db.query(insertQuery, [song_id, userId, start_char, end_char, content, type], (err, result) => {
+        if (err) {
+          console.error("주석 등록 실패:", err);
+          return res.status(500).json({ message: "DB 오류" });
+        }
+
+        res.status(201).json({ message: "주석 등록 완료", annotation_id: result.insertId });
+      });
+    });
+  });
+});
+
+
+// 좋아요 toggle API
+app.post("/api/annotations/:id/like", authenticateFirebaseToken, (req, res) => {
+  const annotationId = req.params.id;
+  const userEmail = req.user.email;
+
+  const userQuery = `SELECT id FROM users WHERE email = ?`;
+  db.query(userQuery, [userEmail], (err, results) => {
+    if (err || results.length === 0) {
+      return res.status(401).json({ message: "유저 인증 실패" });
+    }
+
+    const userId = results[0].id;
+
+    const checkQuery = `
+      SELECT * FROM annotation_likes
+      WHERE user_id = ? AND annotation_id = ?
+    `;
+
+    db.query(checkQuery, [userId, annotationId], (err, results) => {
+      if (err) return res.status(500).json({ message: "DB 오류" });
+
+      if (results.length > 0) {
+        const deleteQuery = `
+          DELETE FROM annotation_likes
+          WHERE user_id = ? AND annotation_id = ?
+        `;
+        db.query(deleteQuery, [userId, annotationId], (err2) => {
+          if (err2) return res.status(500).json({ message: "좋아요 취소 실패" });
+          res.json({ message: "좋아요 취소됨" });
+        });
+      } else {
+        const insertQuery = `
+          INSERT INTO annotation_likes (user_id, annotation_id)
+          VALUES (?, ?)
+        `;
+        db.query(insertQuery, [userId, annotationId], (err3) => {
+          if (err3) return res.status(500).json({ message: "좋아요 실패" });
+          res.json({ message: "좋아요 성공" });
+        });
+      }
+    });
+  });
+});
+
+
+  const checkQuery = `
+    SELECT * FROM annotation_likes
+    WHERE user_id = ? AND annotation_id = ?
+  `;
+
+  db.query(checkQuery, [userId, annotationId], (err, results) => {
+    if (err) {
+      console.error("좋아요 조회 실패:", err);
+      return res.status(500).json({ message: "DB 오류" });
+    }
+
+    if (results.length > 0) {
+      // 이미 좋아요 했음 → 취소
+      const deleteQuery = `
+        DELETE FROM annotation_likes
+        WHERE user_id = ? AND annotation_id = ?
+      `;
+      db.query(deleteQuery, [userId, annotationId], (err2) => {
+        if (err2) {
+          console.error("좋아요 취소 실패:", err2);
+          return res.status(500).json({ message: "좋아요 취소 실패" });
+        }
+        res.json({ message: "좋아요 취소됨" });
+      });
+    } else {
+      // 좋아요 추가
+      const insertQuery = `
+        INSERT INTO annotation_likes (user_id, annotation_id)
+        VALUES (?, ?)
+      `;
+      db.query(insertQuery, [userId, annotationId], (err3) => {
+        if (err3) {
+          console.error("좋아요 추가 실패:", err3);
+          return res.status(500).json({ message: "좋아요 실패" });
+        }
+        res.json({ message: "좋아요 성공" });
+      });
+    }
+  });
+
+//내 평점 가져오기
+app.get("/api/album/:slug/my-rating", authenticateFirebaseToken, (req, res) => {
+  const { slug } = req.params;
+  const userEmail = req.user.email;
+
+  const getUserQuery = "SELECT id FROM users WHERE email = ?";
+  db.query(getUserQuery, [userEmail], (err, userResults) => {
+    if (err || userResults.length === 0) return res.status(401).json({ message: "유저 인증 실패" });
+
+    const userId = userResults[0].id;
+
+    const getAlbumIdQuery = "SELECT id FROM albums WHERE slug = ?";
+    db.query(getAlbumIdQuery, [slug], (err2, albumResults) => {
+      if (err2 || albumResults.length === 0) return res.status(404).json({ message: "앨범 없음" });
+
+      const albumId = albumResults[0].id;
+
+      const query = `SELECT rating FROM album_ratings WHERE user_id = ? AND album_id = ?`;
+      db.query(query, [userId, albumId], (err3, results) => {
+        if (err3) return res.status(500).json({ message: "DB 오류" });
+        if (results.length === 0) return res.json({ rating: null });
+
+        res.json({ rating: results[0].rating });
+      });
+    });
+  });
+}); 
+
+//평점 등록 및 수정
+app.post("/api/album/:slug/rating", authenticateFirebaseToken, (req, res) => {
+  const { rating } = req.body;
+  const { slug } = req.params;
+  const userEmail = req.user.email;
+
+  if (rating === undefined || rating === null || rating < 0.0 || rating > 10.0) {
+    return res.status(400).json({ message: "평점은 0.0~10.0 사이여야 합니다" });
+  }
+
+  const getUserQuery = "SELECT id FROM users WHERE email = ?";
+  db.query(getUserQuery, [userEmail], (err, userResults) => {
+    if (err || userResults.length === 0) return res.status(401).json({ message: "유저 인증 실패" });
+
+    const userId = userResults[0].id;
+
+    const getAlbumIdQuery = "SELECT id FROM albums WHERE slug = ?";
+    db.query(getAlbumIdQuery, [slug], (err2, albumResults) => {
+      if (err2 || albumResults.length === 0) return res.status(404).json({ message: "앨범 없음" });
+
+      const albumId = albumResults[0].id;
+
+      const upsertQuery = `
+        INSERT INTO album_ratings (user_id, album_id, rating)
+        VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE rating = VALUES(rating)
+      `;
+
+      db.query(upsertQuery, [userId, albumId, rating], (err3) => {
+        if (err3) return res.status(500).json({ message: "평점 저장 실패" });
+        res.status(201).json({ message: "평점 저장 완료" });
+      });
+    });
+  });
+});
+//평균 평점 가져오기
+app.get("/api/album/:slug/average-rating", (req, res) => {
+  const { slug } = req.params;
+
+  const getAlbumIdQuery = "SELECT id FROM albums WHERE slug = ?";
+  db.query(getAlbumIdQuery, [slug], (err, albumResults) => {
+    if (err || albumResults.length === 0) return res.status(404).json({ message: "앨범 없음" });
+
+    const albumId = albumResults[0].id;
+
+    const avgQuery = `SELECT AVG(rating) AS average FROM album_ratings WHERE album_id = ?`;
+    db.query(avgQuery, [albumId], (err2, results) => {
+      if (err2) return res.status(500).json({ message: "DB 오류" });
+
+      res.json({ average: results[0].average || 0 });
+    });
+  });
+});
+
+
+});
+
+
+
+
