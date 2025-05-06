@@ -10,17 +10,17 @@ function AlbumPage() {
   const [userRating, setUserRating] = useState(null);
   const [averageRating, setAverageRating] = useState(null);
   const [songs, setSongs] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [newReview, setNewReview] = useState("");
+  const [editReviewId, setEditReviewId] = useState(null);
+  const [sortOrder, setSortOrder] = useState("likes");
 
   useEffect(() => {
-    // 앨범 상세 + 수록곡 정보
     axios
       .get(`/api/album/${artistSlug}/${albumSlug}`)
       .then((res) => {
         setAlbum(res.data);
-        const albumId = res.data.id;
-
-        // 수록곡 요청
-        return axios.get(`/api/albums/${albumId}/songs`);
+        return axios.get(`/api/albums/${res.data.id}/songs`);
       })
       .then((res) => {
         setSongs(res.data);
@@ -31,13 +31,11 @@ function AlbumPage() {
         setLoading(false);
       });
 
-    // 평균 평점 요청
     axios
       .get(`/api/album/${albumSlug}/average-rating`)
       .then((res) => setAverageRating(res.data.average))
       .catch((err) => console.error("평균 평점 로딩 실패:", err));
 
-    // 내 평점 요청
     const fetchUserRating = async () => {
       const token = await getToken();
       if (!token) return;
@@ -55,6 +53,18 @@ function AlbumPage() {
     fetchUserRating();
   }, [artistSlug, albumSlug]);
 
+  useEffect(() => {
+    axios
+      .get(`/api/album/${albumSlug}/reviews?sort=${sortOrder}`)
+      .then((res) => setReviews(res.data))
+      .catch((err) => console.error("리뷰 불러오기 실패:", err));
+  }, [albumSlug, sortOrder]);
+
+  const fetchReviews = async () => {
+    const res = await axios.get(`/api/album/${albumSlug}/reviews?sort=${sortOrder}`);
+    setReviews(res.data);
+  };
+
   const handleRatingChange = async (e) => {
     const newRating = parseFloat(e.target.value);
     setUserRating(newRating);
@@ -69,17 +79,90 @@ function AlbumPage() {
       await axios.post(
         `/api/album/${albumSlug}/rating`,
         { rating: newRating },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // 등록 후 평균 평점 다시 불러오기
       const res = await axios.get(`/api/album/${albumSlug}/average-rating`);
       setAverageRating(res.data.average);
     } catch (err) {
       console.error("평점 등록 실패:", err);
       alert("평점 등록에 실패했습니다.");
+    }
+  };
+
+  const handleReviewSubmit = async () => {
+    const trimmed = newReview.trim();
+    if (!trimmed) {
+      alert("리뷰를 입력해주세요.");
+      return;
+    }
+
+    const token = await getToken();
+    if (!token) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+
+    try {
+      if (editReviewId) {
+        await axios.put(
+          `/api/reviews/${editReviewId}`,
+          { review_text: trimmed },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setEditReviewId(null);
+      } else {
+        await axios.post(
+          `/api/album/${albumSlug}/reviews`,
+          { review_text: trimmed },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      }
+      setNewReview("");
+      fetchReviews();
+    } catch (err) {
+      console.error("리뷰 저장 실패:", err);
+      alert("리뷰 저장 중 오류 발생");
+    }
+  };
+
+  const handleEdit = (id, text) => {
+    setEditReviewId(id);
+    setNewReview(text);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("리뷰를 삭제하시겠습니까?")) return;
+    try {
+      const token = await getToken();
+      await axios.delete(`/api/reviews/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchReviews();
+    } catch (err) {
+      console.error("리뷰 삭제 실패:", err);
+      alert("삭제 중 오류 발생");
+    }
+  };
+
+  const handleLikeToggle = async (reviewId) => {
+    try {
+      const token = await getToken();
+      if (!token) {
+        alert("로그인이 필요합니다.");
+        return;
+      }
+
+      await axios.post(
+        `/api/reviews/${reviewId}/like`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      fetchReviews();
+    } catch (err) {
+      console.error("리뷰 좋아요 실패:", err);
+      alert("좋아요 처리 중 문제가 발생했습니다.");
     }
   };
 
@@ -94,7 +177,6 @@ function AlbumPage() {
       <p className="text-gray-600 mb-1">발매일: {album.release_date}</p>
       <p className="text-gray-700 mt-4 whitespace-pre-line">{album.description}</p>
 
-      {/* 평점 UI */}
       <div className="mt-6">
         <h2 className="text-lg font-semibold">앨범 평점</h2>
         <p className="mb-2 text-gray-700">
@@ -108,14 +190,11 @@ function AlbumPage() {
         >
           <option value="" disabled>선택하세요</option>
           {Array.from({ length: 21 }, (_, i) => (i * 0.5).toFixed(1)).map((score) => (
-            <option key={score} value={score}>
-              {score}
-            </option>
+            <option key={score} value={score}>{score}</option>
           ))}
         </select>
       </div>
 
-      {/* 수록곡 리스트 */}
       <div className="mt-8">
         <h2 className="text-xl font-semibold mb-2">수록곡</h2>
         <ul className="space-y-1">
@@ -127,6 +206,80 @@ function AlbumPage() {
             </li>
           ))}
         </ul>
+      </div>
+
+      <div className="mt-10">
+        <h2 className="text-xl font-semibold mb-3">리뷰</h2>
+
+        <div className="mb-6">
+          <textarea
+            value={newReview}
+            onChange={(e) => setNewReview(e.target.value)}
+            placeholder="리뷰를 입력하세요"
+            className="w-full border rounded p-2 mb-2"
+            rows={3}
+          />
+          <button
+            onClick={handleReviewSubmit}
+            className="bg-green-500 text-white px-4 py-2 rounded"
+          >
+            {editReviewId ? "수정 완료" : "리뷰 등록"}
+          </button>
+        </div>
+
+        <div className="mb-4">
+          <button
+            onClick={() => setSortOrder("likes")}
+            className={`mr-2 px-3 py-1 rounded ${sortOrder === "likes" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+          >
+            좋아요순
+          </button>
+          <button
+            onClick={() => setSortOrder("recent")}
+            className={`px-3 py-1 rounded ${sortOrder === "recent" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+          >
+            최신순
+          </button>
+        </div>
+
+        {reviews.length === 0 ? (
+          <p className="text-gray-500">아직 등록된 리뷰가 없습니다.</p>
+        ) : (
+          <ul className="space-y-4">
+            {reviews.map((review) => (
+              <li key={review.id} className="border p-4 rounded bg-gray-50">
+                <div className="flex items-center mb-2 gap-3">
+                  {review.profile_image && (
+                    <img
+                      src={review.profile_image}
+                      alt="프로필"
+                      className="w-8 h-8 rounded-full"
+                    />
+                  )}
+                  <p className="text-sm text-gray-600">{review.nickname}</p>
+                </div>
+                <p className="mb-2">{review.review_text}</p>
+                <div className="flex gap-4 text-sm">
+                  <button
+                    onClick={() => handleLikeToggle(review.id)}
+                    className={`flex items-center space-x-1 text-sm ${
+                      review.liked ? "text-blue-600" : "text-gray-500"
+                    } hover:text-blue-700`}
+                  >
+                    <span>👍</span>
+                    <span>{review.like_count}</span>
+                  </button>
+                  <button onClick={() => handleEdit(review.id, review.review_text)} className="text-blue-600">
+                    수정
+                  </button>
+                  <button onClick={() => handleDelete(review.id)} className="text-red-600">
+                    삭제
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
