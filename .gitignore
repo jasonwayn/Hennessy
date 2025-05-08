@@ -1,0 +1,9 @@
+# Node
+node_modules/
+
+# 환경변수, 키
+.env
+firebase-service-key.json
+
+# 로그
+npm-debug.log

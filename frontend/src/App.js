@@ -6,7 +6,7 @@ import MyPage from "./pages/MyPage";
 import { AuthProvider } from "./contexts/AuthContext"; 
 import AlbumPage from "./pages/AlbumPage";
 import SearchPage from "./pages/SearchPage";
-import Layout from "./components/Layout"; // ✅ 추가
+import Layout from "./components/Layout"; //layout 적용
 
 function App() {
   return (

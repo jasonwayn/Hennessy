@@ -18,6 +18,7 @@ const ratingRoutes = require("./src/routes/ratingRoutes");
 const registerRoutes = require("./src/routes/registerRoutes");
 const mypageRoutes = require("./src/routes/mypageRoutes");
 const searchRoutes = require("./src/routes/searchRoutes");
+const userRoutes = require("./src/routes/userRoutes");
 
 
 app.use("/api", reviewRoutes);
@@ -28,6 +29,9 @@ app.use("/api", ratingRoutes);
 app.use("/api", registerRoutes);
 app.use("/api", mypageRoutes);
 app.use("/api", searchRoutes);
+app.use("/api", userRoutes);
+
+
 
 // 서버 실행
 app.listen(port, () => {
