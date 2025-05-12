@@ -1,8 +1,12 @@
 const admin = require("firebase-admin");
-const serviceAccount = require("../../hennessy-7faf2-firebase-adminsdk.json");
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+const serviceAccount = require("../../hennessy-4ef47-firebase-adminsdk-fbsvc-d990061c4c");
+
+// ✅ 중복 초기화 방지
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+}
 
 /**
  * Firebase JWT 인증 미들웨어
@@ -20,6 +24,12 @@ function authenticateFirebaseToken(req, res, next) {
     .auth()
     .verifyIdToken(idToken)
     .then((decodedToken) => {
+      // 이메일이 없는 경우 대비
+      if (!decodedToken.email) {
+        console.error("이 토큰에는 이메일이 없습니다:", decodedToken);
+        return res.status(401).json({ message: "이메일 정보 없음" });
+      }
+
       req.user = {
         uid: decodedToken.uid,
         email: decodedToken.email,
@@ -32,4 +42,4 @@ function authenticateFirebaseToken(req, res, next) {
     });
 }
 
-module.exports = authenticateFirebaseToken;
+module.exports = { authenticateFirebaseToken };

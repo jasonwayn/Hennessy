@@ -35,46 +35,47 @@ exports.createArtist = (req, res) => {
 
       res.status(201).json({
         message: "아티스트 저장 성공",
-        artist_id: result.insertId
+        artist_id: result.insertId,
+        slug: artistSlug
       });
     }
   );
 };
 
 
-//artist 조회
+// artist 조회
+exports.getArtistDetail = (req, res) => {
+  const { slug } = req.params;
 
-exports.getArtistWithAlbums = (req, res) => {
-    const { slug } = req.params;
-  
-    // 1. 아티스트 정보 조회
-    const artistQuery = `
-      SELECT id, name, type, formed_date, members, genre, bio, image_url, slug
-      FROM artists
-      WHERE slug = ?
+  // 1. 아티스트 정보 조회
+  const artistQuery = `
+    SELECT id, name, type, formed_date, members, genre, bio, image_url, slug
+    FROM artists
+    WHERE slug = ?
+  `;
+
+  db.query(artistQuery, [slug], (err, artistResults) => {
+    if (err) return res.status(500).json({ message: "DB 오류 (아티스트)" });
+    if (artistResults.length === 0) return res.status(404).json({ message: "아티스트 없음" });
+
+    const artist = artistResults[0];
+
+    // 2. 해당 아티스트가 참여한 모든 앨범 조회 (메인/협업 포함)
+    const albumQuery = `
+      SELECT a.id, a.title, a.slug, a.genre, a.release_date, a.image_url, a.type
+      FROM albums a
+      JOIN album_artists aa ON a.id = aa.album_id
+      WHERE aa.artist_id = ?
+      ORDER BY a.release_date DESC
     `;
-  
-    db.query(artistQuery, [slug], (err, artistResults) => {
-      if (err) return res.status(500).json({ message: "DB 오류 (아티스트)" });
-      if (artistResults.length === 0) return res.status(404).json({ message: "아티스트 없음" });
-  
-      const artist = artistResults[0];
-  
-      // 2. 앨범 목록 조회
-      const albumQuery = `
-        SELECT id, title, slug, genre, release_date, image_url
-        FROM albums
-        WHERE artist_id = ?
-        ORDER BY release_date DESC
-      `;
-  
-      db.query(albumQuery, [artist.id], (err2, albumResults) => {
-        if (err2) return res.status(500).json({ message: "DB 오류 (앨범)" });
-  
-        res.json({
-          artist,
-          albums: albumResults,
-        });
+
+    db.query(albumQuery, [artist.id], (err2, albumResults) => {
+      if (err2) return res.status(500).json({ message: "DB 오류 (앨범)" });
+
+      res.json({
+        artist,
+        albums: albumResults,
       });
     });
-  };
+  });
+};

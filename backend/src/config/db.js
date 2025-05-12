@@ -4,7 +4,7 @@ const mysql = require("mysql2");
 const db = mysql.createConnection({
   host: "localhost",
   user: "root",
-  password: "hjsoo2001!", // 환경변수로 바꾸는 게 좋음
+  password: "kweb", // 환경변수로 바꾸는 게 좋음
   database: "hennessy_db"
 });
 

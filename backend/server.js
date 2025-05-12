@@ -19,17 +19,21 @@ const registerRoutes = require("./src/routes/registerRoutes");
 const mypageRoutes = require("./src/routes/mypageRoutes");
 const searchRoutes = require("./src/routes/searchRoutes");
 const userRoutes = require("./src/routes/userRoutes");
+const newsRoutes = require("./src/routes/newsRoutes");
+const artistRoutes = require("./src/routes/artistRoutes");
 
 
-app.use("/api", reviewRoutes);
 app.use("/api", annotationRoutes);
-app.use("/api", albumRoutes);
 app.use("/api", songRoutes);
 app.use("/api", ratingRoutes);
+app.use("/api", reviewRoutes);
 app.use("/api", registerRoutes);
 app.use("/api", mypageRoutes);
 app.use("/api", searchRoutes);
 app.use("/api", userRoutes);
+app.use("/api", newsRoutes);
+app.use("/api", artistRoutes);
+app.use("/api", albumRoutes);
 
 
 

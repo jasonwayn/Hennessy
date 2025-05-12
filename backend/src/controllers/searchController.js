@@ -1,3 +1,4 @@
+// ✅ 수정된 searchController.js
 const db = require("../config/db");
 
 exports.search = (req, res) => {
@@ -13,19 +14,18 @@ exports.search = (req, res) => {
     songs: [],
   };
 
-  const artistQuery = `SELECT id, name, slug FROM artists WHERE name LIKE ? LIMIT 10`;
+  const artistQuery = `SELECT id, name, slug, image_url FROM artists WHERE name LIKE ? LIMIT 10`;
   const albumQuery = `
-    SELECT a.id, a.title, a.slug, ar.name AS artist_name, ar.slug AS artist_slug
+    SELECT a.id, a.title, a.slug, a.image_url, ar.name AS artist_name, ar.slug AS artist_slug
     FROM albums a
     JOIN artists ar ON a.artist_id = ar.id
     WHERE a.title LIKE ?
     LIMIT 10
   `;
   const songQuery = `
-    SELECT s.id, s.title, s.album_id, a.slug AS album_slug, ar.name AS artist_name, ar.slug AS artist_slug
+    SELECT s.id, s.title, al.image_url AS album_image_url
     FROM songs s
-    JOIN albums a ON s.album_id = a.id
-    JOIN artists ar ON a.artist_id = ar.id
+    JOIN albums al ON s.album_id = al.id
     WHERE s.title LIKE ?
     LIMIT 10
   `;

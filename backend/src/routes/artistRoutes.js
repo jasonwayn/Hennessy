@@ -7,6 +7,6 @@ const artistController = require("../controllers/artistController");
 router.post("/artists", artistController.createArtist);
 
 //artist 조회
-router.get("/artists/:slug", artistController.getArtistWithAlbums);
+router.get("/artists/:slug", artistController.getArtistDetail);
 
 module.exports = router;

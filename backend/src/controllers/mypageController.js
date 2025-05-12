@@ -72,19 +72,47 @@ exports.getUserRatingsGrouped = (req, res) => {
     });
   };
 
-//프로필 편집
-exports.updateProfileImage = (req, res) => {
-    const { image_url } = req.body;
-    const userEmail = req.user.email;
-  
-    if (!image_url) return res.status(400).json({ message: "URL 없음" });
-  
-    const query = `UPDATE users SET profile_image = ? WHERE email = ?`;
-    db.query(query, [image_url, userEmail], (err) => {
-      if (err) return res.status(500).json({ message: "DB 오류" });
-      res.json({ message: "프로필 이미지 업데이트 완료" });
+//프로필 편집 (username) 
+exports.updateProfileInfo = (req, res) => {
+  const { nickname, bio } = req.body;
+  const email = req.user.email;
+
+  if (!nickname || !/^[가-힣a-zA-Z0-9]+$/.test(nickname)) {
+    return res.status(400).json({ message: "닉네임은 한글, 영어, 숫자만 허용됩니다." });
+  }
+
+  const query = `UPDATE users SET nickname = ?, bio = ? WHERE email = ?`;
+  db.query(query, [nickname, bio, email], (err) => {
+    if (err) return res.status(500).json({ message: "DB 오류" });
+    res.json({ message: "프로필 정보 수정 완료" });
+  });
+};
+
+// 내가 저장한 다른 사람 리뷰 조회
+exports.getSavedReviews = (req, res) => {
+  const userEmail = req.user.email;
+
+  db.query("SELECT id FROM users WHERE email = ?", [userEmail], (err, userResults) => {
+    if (err || userResults.length === 0) {
+      return res.status(401).json({ message: "유저 인증 실패" });
+    }
+
+    const userId = userResults[0].id;
+
+    const query = `
+      SELECT sr.id, r.review_text, u.nickname, u.profile_image, a.title AS album_title, ar.name AS artist_name
+      FROM saved_reviews sr
+      JOIN reviews r ON sr.review_id = r.id
+      JOIN users u ON r.user_id = u.id
+      JOIN albums a ON r.album_id = a.id
+      JOIN artists ar ON a.artist_id = ar.id
+      WHERE sr.user_id = ?
+      ORDER BY sr.id DESC
+    `;
+
+    db.query(query, [userId], (err2, results) => {
+      if (err2) return res.status(500).json({ message: "DB 오류" });
+      res.json(results);
     });
-  };
-
-
-  
+  });
+};
