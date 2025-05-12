@@ -4,8 +4,6 @@ import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "../firebase";
 import axios from "axios";
 import EditProfileModal from "../components/EditProfileModal";
 import ChangePasswordModal from "../components/ChangePasswordModal";
@@ -15,7 +13,6 @@ function MyPage() {
   const navigate = useNavigate();
   const [nickname, setNickname] = useState("");
   const [profileImage, setProfileImage] = useState(null);
-  const [selectedFile, setSelectedFile] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [offset, setOffset] = useState(0);
   const [ratingsGrouped, setRatingsGrouped] = useState([]);
@@ -24,6 +21,7 @@ function MyPage() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [bio, setBio] = useState("");
   const [savedReviews, setSavedReviews] = useState([]);
+  const [expandedRatings, setExpandedRatings] = useState({});
 
   const ratingsRef = useRef(null);
   const reviewsRef = useRef(null);
@@ -76,31 +74,15 @@ function MyPage() {
     setOffset(nextOffset);
   };
 
+  const getVisibleAlbums = (groupKey, albums) => {
+    const count = expandedRatings[groupKey] || 8;
+    return albums.slice(0, count);
+  };
+
   const handleLogout = async () => {
     await signOut(auth);
     alert("로그아웃 완료!");
-    navigate("/login");
-  };
-
-  const handleImageChange = (e) => setSelectedFile(e.target.files[0]);
-
-  const handleUpload = async () => {
-    if (!selectedFile || !user) return;
-
-    const storageRef = ref(storage, `profile_images/${user.uid}_${selectedFile.name}`);
-    await uploadBytes(storageRef, selectedFile);
-    const downloadURL = await getDownloadURL(storageRef);
-
-    const token = await user.getIdToken();
-
-    await axios.post(
-      "/api/me/profile-image",
-      { image_url: downloadURL },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    setProfileImage(downloadURL);
-    alert("프로필 이미지가 저장되었습니다.");
+    navigate("/news");
   };
 
   const scrollToSection = (ref) => {
@@ -135,16 +117,6 @@ function MyPage() {
         </div>
       </div>
 
-      <div className="mb-6">
-        <input type="file" onChange={handleImageChange} />
-        <button
-          onClick={handleUpload}
-          className="ml-2 px-3 py-1 bg-blue-500 text-white rounded"
-        >
-          이미지 업로드
-        </button>
-      </div>
-
       <div className="flex gap-4 mb-8">
         <div className="flex flex-col gap-2">
           <button onClick={() => scrollToSection(ratingsRef)} className="bg-gray-200 px-3 py-1 rounded">ratings</button>
@@ -159,20 +131,44 @@ function MyPage() {
 
       <div ref={ratingsRef} className="mb-10">
         <h3 className="text-xl font-semibold mb-2">내 평점</h3>
-        {ratingsGrouped.map((group) => (
-          <div key={group.rating_group} className="mb-4">
-            <h4 className="font-bold mb-2">{group.rating_group}점대</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {JSON.parse(group.albums).map((album) => (
-                <div key={album.slug} className="text-center">
-                  <img src={album.image_url} alt={album.title} className="w-full rounded" />
-                  <p className="text-sm mt-1">{album.title}</p>
-                  <p className="text-xs text-gray-500">{album.rating}점</p>
-                </div>
-              ))}
+        {ratingsGrouped.map((group) => {
+          const groupKey = group.rating_group;
+          const allAlbums = JSON.parse(group.albums);
+          const visibleCount = expandedRatings[groupKey] || 8;
+          const visibleAlbums = allAlbums.slice(0, visibleCount);
+
+          return (
+            <div key={groupKey} className="mb-4">
+              <h4 className="font-bold mb-2">{groupKey}</h4>
+              <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
+                {visibleAlbums.map((album) => (
+                  <div key={album.slug} className="text-center">
+                    <img
+                      src={album.image_url}
+                      alt={album.title}
+                      className="w-20 h-20 object-cover rounded mx-auto"
+                    />
+                    <p className="text-xs mt-1">{album.title}</p>
+                    <p className="text-xs text-gray-500">{album.rating}</p>
+                  </div>
+                ))}
+              </div>
+              {allAlbums.length > visibleCount && (
+                <button
+                  onClick={() =>
+                    setExpandedRatings((prev) => ({
+                      ...prev,
+                      [groupKey]: visibleCount + 8,
+                    }))
+                  }
+                  className="mt-2 text-sm text-blue-500 underline"
+                >
+                  더보기
+                </button>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div ref={reviewsRef} className="mb-10">
@@ -220,9 +216,10 @@ function MyPage() {
           onClose={() => setShowEditModal(false)}
           currentNickname={nickname}
           currentBio={bio}
-          onUpdate={(newNick, newBio) => {
+          onUpdate={(newNick, newBio, newImg) => {
             setNickname(newNick);
             setBio(newBio);
+            if (newImg) setProfileImage(newImg);
           }}
         />
       )}

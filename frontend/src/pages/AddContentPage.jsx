@@ -203,8 +203,13 @@ function AddContentPage() {
             </div>
           </div>
           <label className="block">
-            About (members)
-            <input type="text" className="w-full border p-2 rounded mt-1" value={about} onChange={(e) => setAbout(e.target.value)} />
+            {type === "solo" ? "Also Known As" : "Members"}
+            <input
+              type="text"
+              className="w-full border p-2 rounded mt-1"
+              value={about}
+              onChange={(e) => setAbout(e.target.value)}
+            />
           </label>
           <div className="flex gap-4">
             <label className="flex-1">
@@ -219,10 +224,18 @@ function AddContentPage() {
               <input type="text" className="w-full border p-2 rounded mt-1" value={genre} onChange={(e) => setGenre(e.target.value)} />
             </label>
           </div>
-          <label className="block">
-            Formed Date
-            <input type="date" className="w-full border p-2 rounded mt-1" value={formedDate} onChange={(e) => setFormedDate(e.target.value)} />
-          </label>
+          {type === "group" && (
+            <label className="block">
+              Formed Date
+              <input
+                type="date"
+                className="w-full border p-2 rounded mt-1"
+                value={formedDate}
+                onChange={(e) => setFormedDate(e.target.value)}
+              />
+            </label>
+          )}
+
           <label className="block">
             Bio (description)
             <textarea className="w-full border p-2 rounded mt-1" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />

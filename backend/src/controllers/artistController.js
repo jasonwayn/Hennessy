@@ -62,16 +62,24 @@ exports.getArtistDetail = (req, res) => {
 
     // 2. 해당 아티스트가 참여한 모든 앨범 조회 (메인/협업 포함)
     const albumQuery = `
-      SELECT a.id, a.title, a.slug, a.genre, a.release_date, a.image_url, a.type
-      FROM albums a
-      JOIN album_artists aa ON a.id = aa.album_id
-      WHERE aa.artist_id = ?
-      ORDER BY a.release_date DESC
+      (
+        SELECT a.id, a.title, a.slug, a.genre, a.release_date, a.image_url, a.type
+        FROM albums a
+        WHERE a.artist_id = ?
+      )
+      UNION
+      (
+        SELECT a.id, a.title, a.slug, a.genre, a.release_date, a.image_url, a.type
+        FROM albums a
+        JOIN album_artists aa ON a.id = aa.album_id
+        WHERE aa.artist_id = ?
+      )
+      ORDER BY release_date DESC
     `;
-
-    db.query(albumQuery, [artist.id], (err2, albumResults) => {
+      
+    db.query(albumQuery, [artist.id, artist.id], (err2, albumResults) => {
       if (err2) return res.status(500).json({ message: "DB 오류 (앨범)" });
-
+    
       res.json({
         artist,
         albums: albumResults,

@@ -11,6 +11,7 @@ import AlbumsPage from "./pages/AlbumsPage";
 import ArtistPage from "./pages/ArtistPage";
 import EditProfile from "./pages/EditProfile"; 
 import AddContentPage from "./pages/AddContentPage";
+import SongPage from "./pages/SongPage";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
             <Route path="/artist/:slug" element={<ArtistPage />} />
             <Route path="/edit-profile" element={<EditProfile />} /> 
             <Route path="/add" element={<AddContentPage />} />
+            <Route path="/songs/:id" element={<SongPage />} />
           </Route>
         </Routes>
       </AuthProvider>

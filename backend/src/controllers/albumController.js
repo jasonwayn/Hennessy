@@ -8,7 +8,7 @@ exports.getAlbumDetail = (req, res) => {
   const { artistSlug, albumSlug } = req.params;
 
   const albumQuery = `
-    SELECT a.*, ar.name AS main_artist_name, ar.slug AS main_artist_slug
+    SELECT a.*, ar.name AS artist_name, ar.slug AS artist_slug
     FROM albums a
     JOIN artists ar ON a.artist_id = ar.id
     WHERE a.slug = ? AND ar.slug = ?

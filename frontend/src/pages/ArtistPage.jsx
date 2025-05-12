@@ -46,10 +46,18 @@ function ArtistPage() {
         />
         <div className="flex-1">
           <h2 className="text-lg font-semibold mb-2">Artist Info</h2>
-          <p>Type: {artist.type}</p>
-          <p>Formed: {artist.formed_date?.slice(0, 10) || "정보 없음"}</p>
-          <p>Genre: {artist.genre || "정보 없음"}</p>
-          {artist.members && <p>Members: {artist.members}</p>}
+          {artist.type === "group" ? (
+            <>
+              <p>Formed: {artist.formed_date?.slice(0, 10) || "정보 없음"}</p>
+              <p>Genre: {artist.genre || "정보 없음"}</p>
+              {artist.members && <p>Members: {artist.members}</p>}
+            </>
+          ) : (
+            <>
+              <p>Also Known As: {artist.members || "정보 없음"}</p>
+              <p>Genre: {artist.genre || "정보 없음"}</p>
+            </>
+          )}
         </div>
       </div>
 
