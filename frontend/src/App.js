@@ -1,33 +1,37 @@
-// App.js
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
 import MyPage from "./pages/MyPage";
 import { AuthProvider } from "./contexts/AuthContext"; 
 import AlbumPage from "./pages/AlbumPage";
 import SearchPage from "./pages/SearchPage";
-import Layout from "./components/Layout"; //layout 적용
+import Layout from "./components/Layout";
+import NewsPage from "./pages/NewsPage";
+import NewsDetailPage from "./pages/NewsDetailPage";
+import NewsEditPage from "./pages/NewsEditPage";
+import AlbumsPage from "./pages/AlbumsPage";
+import ArtistPage from "./pages/ArtistPage";
+import EditProfile from "./pages/EditProfile"; 
+import AddContentPage from "./pages/AddContentPage";
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
         <Routes>
-
-          {/* ✅ 공통 레이아웃이 필요한 경로들 */}
           <Route element={<Layout />}>
             <Route path="/mypage" element={<MyPage />} />
             <Route path="/album/:artistSlug/:albumSlug" element={<AlbumPage />} />
             <Route path="/search" element={<SearchPage />} />
+            <Route path="/albums" element={<AlbumsPage />} />
+            <Route path="/news" element={<NewsPage />} />
+            <Route path="/news/:id" element={<NewsDetailPage />} />
+            <Route path="/news/edit/:id?" element={<NewsEditPage />} />
+            <Route path="/artist/:slug" element={<ArtistPage />} />
+            <Route path="/edit-profile" element={<EditProfile />} /> 
+            <Route path="/add" element={<AddContentPage />} />
           </Route>
-
-          {/* ❗ 로그인/회원가입은 헤더 제외 (단독 화면) */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-
         </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+// src/pages/MyPage.js
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
@@ -6,6 +7,8 @@ import { auth } from "../firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
 import axios from "axios";
+import EditProfileModal from "../components/EditProfileModal";
+import ChangePasswordModal from "../components/ChangePasswordModal";
 
 function MyPage() {
   const { user } = useAuth();
@@ -17,6 +20,14 @@ function MyPage() {
   const [offset, setOffset] = useState(0);
   const [ratingsGrouped, setRatingsGrouped] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [bio, setBio] = useState("");
+  const [savedReviews, setSavedReviews] = useState([]);
+
+  const ratingsRef = useRef(null);
+  const reviewsRef = useRef(null);
+  const savedRef = useRef(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -26,7 +37,8 @@ function MyPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setNickname(res.data.nickname);
-      setProfileImage(res.data.profile_image_url); // DB에 저장된 URL
+      setProfileImage(res.data.profile_image_url);
+      setBio(res.data.bio);
     };
 
     const fetchReviews = async () => {
@@ -46,9 +58,9 @@ function MyPage() {
     };
 
     if (user) {
-      Promise.all([fetchProfile(), fetchReviews(), fetchRatings()]).then(() =>
-        setLoading(false)
-      );
+      Promise.all([fetchProfile(), fetchReviews(), fetchRatings()])
+        .then(() => setLoading(false))
+        .catch(() => setLoading(false));
     } else {
       navigate("/login");
     }
@@ -70,21 +82,19 @@ function MyPage() {
     navigate("/login");
   };
 
-  const handleImageChange = (e) => {
-    setSelectedFile(e.target.files[0]);
-  };
+  const handleImageChange = (e) => setSelectedFile(e.target.files[0]);
 
   const handleUpload = async () => {
     if (!selectedFile || !user) return;
 
-    const storageRef = ref(storage, `profiles/${user.uid}_${selectedFile.name}`);
+    const storageRef = ref(storage, `profile_images/${user.uid}_${selectedFile.name}`);
     await uploadBytes(storageRef, selectedFile);
     const downloadURL = await getDownloadURL(storageRef);
 
     const token = await user.getIdToken();
 
     await axios.post(
-      "/api/mypage/profile-image",
+      "/api/me/profile-image",
       { image_url: downloadURL },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -93,13 +103,24 @@ function MyPage() {
     alert("프로필 이미지가 저장되었습니다.");
   };
 
-  if (!user || loading) return <div>로딩 중...</div>;
+  const scrollToSection = (ref) => {
+    ref.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const fetchSavedReviews = async () => {
+    const token = await user.getIdToken();
+    const res = await axios.get("/api/mypage/saved-reviews", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setSavedReviews(res.data);
+  };
+
+  if (!user || loading) return <div className="p-8 text-center">로딩 중...</div>;
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
       <h2 className="text-2xl font-bold mb-4">마이페이지</h2>
-      
-      {/* 프로필 섹션 */}
+
       <div className="flex items-center mb-4">
         {profileImage && (
           <img
@@ -113,6 +134,7 @@ function MyPage() {
           <p className="text-sm text-gray-500">{user.email}</p>
         </div>
       </div>
+
       <div className="mb-6">
         <input type="file" onChange={handleImageChange} />
         <button
@@ -123,27 +145,19 @@ function MyPage() {
         </button>
       </div>
 
-      {/* 내가 쓴 리뷰 */}
-      <div className="mb-8">
-        <h3 className="text-xl font-semibold mb-2">내 리뷰</h3>
-        {reviews.map((r) => (
-          <div key={r.id} className="border p-4 rounded mb-2">
-            <p className="text-gray-700 mb-1">{r.review_text}</p>
-            <p className="text-sm text-gray-500">
-              {r.artist_name} - {r.album_title}
-            </p>
-          </div>
-        ))}
-        <button
-          onClick={loadMoreReviews}
-          className="mt-2 text-blue-500 underline"
-        >
-          더보기
-        </button>
+      <div className="flex gap-4 mb-8">
+        <div className="flex flex-col gap-2">
+          <button onClick={() => scrollToSection(ratingsRef)} className="bg-gray-200 px-3 py-1 rounded">ratings</button>
+          <button onClick={() => scrollToSection(reviewsRef)} className="bg-gray-200 px-3 py-1 rounded">reviews</button>
+        </div>
+        <div className="flex flex-col gap-2">
+          <button onClick={() => scrollToSection(savedRef)} className="bg-gray-200 px-3 py-1 rounded">SAVED</button>
+          <button onClick={() => setShowEditModal(true)} className="bg-gray-200 px-3 py-1 rounded">edit profile</button>
+          <button onClick={() => setShowPasswordModal(true)} className="bg-gray-200 px-3 py-1 rounded">change password</button>
+        </div>
       </div>
 
-      {/* 평점 그룹 */}
-      <div>
+      <div ref={ratingsRef} className="mb-10">
         <h3 className="text-xl font-semibold mb-2">내 평점</h3>
         {ratingsGrouped.map((group) => (
           <div key={group.rating_group} className="mb-4">
@@ -151,11 +165,7 @@ function MyPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {JSON.parse(group.albums).map((album) => (
                 <div key={album.slug} className="text-center">
-                  <img
-                    src={album.image_url}
-                    alt={album.title}
-                    className="w-full rounded"
-                  />
+                  <img src={album.image_url} alt={album.title} className="w-full rounded" />
                   <p className="text-sm mt-1">{album.title}</p>
                   <p className="text-xs text-gray-500">{album.rating}점</p>
                 </div>
@@ -165,13 +175,61 @@ function MyPage() {
         ))}
       </div>
 
-      {/* 로그아웃 */}
+      <div ref={reviewsRef} className="mb-10">
+        <h3 className="text-xl font-semibold mb-2">내 리뷰</h3>
+        {reviews.map((r) => (
+          <div key={r.id} className="border p-4 rounded mb-2">
+            <p className="text-gray-700 mb-1">{r.review_text}</p>
+            <p className="text-sm text-gray-500">
+              {r.artist_name} - {r.album_title}
+            </p>
+          </div>
+        ))}
+        <button onClick={loadMoreReviews} className="mt-2 text-blue-500 underline">
+          더보기
+        </button>
+      </div>
+
+      <div ref={savedRef}>
+        <h3 className="text-xl font-semibold mb-2">SAVED CONTENTS</h3>
+        {savedReviews.length === 0 ? (
+          <p className="text-gray-500">저장된 리뷰가 없습니다.</p>
+        ) : (
+          <ul className="space-y-4">
+            {savedReviews.map((review) => (
+              <li key={review.id} className="border p-4 rounded">
+                <p className="text-gray-800 mb-1">{review.review_text}</p>
+                <div className="text-sm text-gray-500">
+                  {review.nickname} / {review.artist_name} - {review.album_title}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       <button
         onClick={handleLogout}
         className="mt-6 bg-red-500 text-white px-4 py-2 rounded"
       >
         로그아웃
       </button>
+
+      {showEditModal && (
+        <EditProfileModal
+          onClose={() => setShowEditModal(false)}
+          currentNickname={nickname}
+          currentBio={bio}
+          onUpdate={(newNick, newBio) => {
+            setNickname(newNick);
+            setBio(newBio);
+          }}
+        />
+      )}
+
+      {showPasswordModal && (
+        <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { getToken } from "../utils/getToken";
@@ -54,15 +54,35 @@ function AlbumPage() {
   }, [artistSlug, albumSlug]);
 
   useEffect(() => {
-    axios
-      .get(`/api/album/${albumSlug}/reviews?sort=${sortOrder}`)
-      .then((res) => setReviews(res.data))
-      .catch((err) => console.error("리뷰 불러오기 실패:", err));
+    const fetchReviewsWithAuth = async () => {
+      const token = await getToken();
+      if (!token) return;
+
+      try {
+        const res = await axios.get(`/api/album/${albumSlug}/reviews?sort=${sortOrder}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setReviews(res.data);
+      } catch (err) {
+        console.error("리뷰 불러오기 실패:", err);
+      }
+    };
+
+    fetchReviewsWithAuth();
   }, [albumSlug, sortOrder]);
 
   const fetchReviews = async () => {
-    const res = await axios.get(`/api/album/${albumSlug}/reviews?sort=${sortOrder}`);
-    setReviews(res.data);
+    const token = await getToken();
+    if (!token) return;
+
+    try {
+      const res = await axios.get(`/api/album/${albumSlug}/reviews?sort=${sortOrder}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setReviews(res.data);
+    } catch (err) {
+      console.error("리뷰 불러오기 실패:", err);
+    }
   };
 
   const handleRatingChange = async (e) => {
@@ -171,16 +191,49 @@ function AlbumPage() {
 
   return (
     <div className="p-8">
-      <h1 className="text-3xl font-bold mb-2">{album.title}</h1>
-      <p className="text-gray-600 mb-1">아티스트: {album.artist_name}</p>
-      <p className="text-gray-600 mb-1">장르: {album.genre}</p>
-      <p className="text-gray-600 mb-1">발매일: {album.release_date}</p>
-      <p className="text-gray-700 mt-4 whitespace-pre-line">{album.description}</p>
+      {/* 앨범 커버 + 메타 정보 */}
+      <div className="flex flex-col md:flex-row gap-6 mb-8">
+        <div className="w-full md:w-48 flex-shrink-0">
+          <img
+            src={album.image_url}
+            alt={album.title}
+            className="w-full h-auto rounded shadow object-cover"
+          />
+        </div>
 
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold mb-2">{album.title}</h1>
+          <p className="text-gray-600 mb-1">
+            아티스트: {" "}
+            <Link to={`/artist/${album.artist_slug}`} className="text-blue-600 hover:underline">
+              {album.artist_name}
+            </Link>
+          </p>
+          {album.type === "collaboration" && album.collaborators && album.collaborators.length > 1 && (
+            <p className="text-gray-600 text-sm mb-1">
+              참여 아티스트: {album.collaborators.map((a, idx) => (
+                <span key={a.id}>
+                  <Link to={`/artist/${a.slug}`} className="text-blue-600 hover:underline">
+                    {a.name}
+                  </Link>
+                  {idx < album.collaborators.length - 1 && ", "}
+                </span>
+              ))}
+            </p>
+          )}
+          <p className="text-gray-600 mb-1">장르: {album.genre}</p>
+          <p className="text-gray-600 mb-1">발매일: {album.release_date?.slice(0, 10)}</p>
+          {album.description && (
+            <p className="text-gray-700 mt-4 whitespace-pre-line">{album.description}</p>
+          )}
+        </div>
+      </div>
+
+      {/* 앨범 평점 */}
       <div className="mt-6">
         <h2 className="text-lg font-semibold">앨범 평점</h2>
         <p className="mb-2 text-gray-700">
-          평균 평점: {averageRating !== null ? averageRating.toFixed(1) : "불러오는 중..."}
+          평균 평점: {typeof averageRating === "number" ? averageRating.toFixed(1) : "불러오는 중..."}
         </p>
         <label className="mr-2">내 평점:</label>
         <select
@@ -188,13 +241,18 @@ function AlbumPage() {
           onChange={handleRatingChange}
           className="border rounded px-2 py-1"
         >
-          <option value="" disabled>선택하세요</option>
+          <option value="" disabled>
+            선택하세요
+          </option>
           {Array.from({ length: 21 }, (_, i) => (i * 0.5).toFixed(1)).map((score) => (
-            <option key={score} value={score}>{score}</option>
+            <option key={score} value={score}>
+              {score}
+            </option>
           ))}
         </select>
       </div>
 
+      {/* 수록곡 */}
       <div className="mt-8">
         <h2 className="text-xl font-semibold mb-2">수록곡</h2>
         <ul className="space-y-1">
@@ -208,6 +266,7 @@ function AlbumPage() {
         </ul>
       </div>
 
+      {/* 리뷰 섹션 */}
       <div className="mt-10">
         <h2 className="text-xl font-semibold mb-3">리뷰</h2>
 
@@ -230,13 +289,17 @@ function AlbumPage() {
         <div className="mb-4">
           <button
             onClick={() => setSortOrder("likes")}
-            className={`mr-2 px-3 py-1 rounded ${sortOrder === "likes" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+            className={`mr-2 px-3 py-1 rounded ${
+              sortOrder === "likes" ? "bg-blue-500 text-white" : "bg-gray-200"
+            }`}
           >
             좋아요순
           </button>
           <button
             onClick={() => setSortOrder("recent")}
-            className={`px-3 py-1 rounded ${sortOrder === "recent" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+            className={`px-3 py-1 rounded ${
+              sortOrder === "recent" ? "bg-blue-500 text-white" : "bg-gray-200"
+            }`}
           >
             최신순
           </button>
@@ -245,10 +308,10 @@ function AlbumPage() {
         {reviews.length === 0 ? (
           <p className="text-gray-500">아직 등록된 리뷰가 없습니다.</p>
         ) : (
-          <ul className="space-y-4">
+          <ul className="space-y-6">
             {reviews.map((review) => (
-              <li key={review.id} className="border p-4 rounded bg-gray-50">
-                <div className="flex items-center mb-2 gap-3">
+              <li key={review.id} className="border-b pb-4">
+                <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                   {review.profile_image && (
                     <img
                       src={review.profile_image}
