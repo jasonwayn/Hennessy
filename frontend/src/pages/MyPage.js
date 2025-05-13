@@ -100,37 +100,69 @@ function MyPage() {
   if (!user || loading) return <div className="p-8 text-center">로딩 중...</div>;
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">마이페이지</h2>
+    <div className="max-w-6xl mx-auto">
+      <div className="bg-[#f9dad6] p-8 mb-10 rounded">
+        <div className="flex justify-between items-start">
+          <div className="flex items-center gap-6">
+            {profileImage && (
+              <img
+                src={profileImage}
+                alt="프로필 이미지"
+                className="w-28 h-28 rounded-full object-cover"
+              />
+            )}
+            <div>
+              <p className="text-2xl font-bold">{nickname || "닉네임 없음"}</p>
+              <p className="text-sm text-gray-600 mb-3">{user.email}</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowPasswordModal(true)}
+                  className="text-sm px-3 py-1 bg-gray-200 rounded"
+                >
+                  change password
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="text-sm px-3 py-1 bg-red-500 text-white rounded"
+                >
+                  로그아웃
+                </button>
+              </div>
+            </div>
+          </div>
 
-      <div className="flex items-center mb-4">
-        {profileImage && (
-          <img
-            src={profileImage}
-            alt="프로필 이미지"
-            className="w-16 h-16 rounded-full mr-4 object-cover"
-          />
-        )}
-        <div>
-          <p className="font-semibold">{nickname || "닉네임 없음"}</p>
-          <p className="text-sm text-gray-500">{user.email}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="w-28 h-28 bg-gray-200 rounded text-center font-medium text-sm flex items-center justify-center"
+            >
+              edit profile
+            </button>
+            <button
+              onClick={() => scrollToSection(ratingsRef)}
+              className="w-28 h-28 bg-gray-200 rounded text-center font-medium text-sm flex items-center justify-center"
+            >
+              ratings
+            </button>
+            <button
+              onClick={() => scrollToSection(reviewsRef)}
+              className="w-28 h-28 bg-gray-200 rounded text-center font-medium text-sm flex items-center justify-center"
+            >
+              reviews
+            </button>
+            <button
+              onClick={() => scrollToSection(savedRef)}
+              className="w-28 h-28 bg-gray-200 rounded text-center font-medium text-sm flex items-center justify-center"
+            >
+              SAVED
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="flex gap-4 mb-8">
-        <div className="flex flex-col gap-2">
-          <button onClick={() => scrollToSection(ratingsRef)} className="bg-gray-200 px-3 py-1 rounded">ratings</button>
-          <button onClick={() => scrollToSection(reviewsRef)} className="bg-gray-200 px-3 py-1 rounded">reviews</button>
-        </div>
-        <div className="flex flex-col gap-2">
-          <button onClick={() => scrollToSection(savedRef)} className="bg-gray-200 px-3 py-1 rounded">SAVED</button>
-          <button onClick={() => setShowEditModal(true)} className="bg-gray-200 px-3 py-1 rounded">edit profile</button>
-          <button onClick={() => setShowPasswordModal(true)} className="bg-gray-200 px-3 py-1 rounded">change password</button>
-        </div>
-      </div>
 
       <div ref={ratingsRef} className="mb-10">
-        <h3 className="text-xl font-semibold mb-2">내 평점</h3>
+        <h3 className="text-xl font-semibold mb-2 border-l-4 pl-2 border-[#db4c3f]">내 평점</h3>
         {ratingsGrouped.map((group) => {
           const groupKey = group.rating_group;
           const allAlbums = JSON.parse(group.albums);
@@ -172,7 +204,7 @@ function MyPage() {
       </div>
 
       <div ref={reviewsRef} className="mb-10">
-        <h3 className="text-xl font-semibold mb-2">내 리뷰</h3>
+        <h3 className="text-xl font-semibold mb-2 border-l-4 pl-2 border-[#db4c3f]">내 리뷰</h3>
         {reviews.map((r) => (
           <div key={r.id} className="border p-4 rounded mb-2">
             <p className="text-gray-700 mb-1">{r.review_text}</p>
@@ -187,7 +219,7 @@ function MyPage() {
       </div>
 
       <div ref={savedRef}>
-        <h3 className="text-xl font-semibold mb-2">SAVED CONTENTS</h3>
+        <h3 className="text-xl font-semibold mb-2 border-l-4 pl-2 border-[#db4c3f]">SAVED CONTENTS</h3>
         {savedReviews.length === 0 ? (
           <p className="text-gray-500">저장된 리뷰가 없습니다.</p>
         ) : (
@@ -203,13 +235,6 @@ function MyPage() {
           </ul>
         )}
       </div>
-
-      <button
-        onClick={handleLogout}
-        className="mt-6 bg-red-500 text-white px-4 py-2 rounded"
-      >
-        로그아웃
-      </button>
 
       {showEditModal && (
         <EditProfileModal
