@@ -5,8 +5,10 @@ import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import axios from "axios";
+import { Link } from "react-router-dom";
 import EditProfileModal from "../components/EditProfileModal";
 import ChangePasswordModal from "../components/ChangePasswordModal";
+import { useLoginModal } from "../contexts/LoginModalContext.js";
 
 function MyPage() {
   const { user } = useAuth();
@@ -26,6 +28,8 @@ function MyPage() {
   const ratingsRef = useRef(null);
   const reviewsRef = useRef(null);
   const savedRef = useRef(null);
+  const { openLoginModal } = useLoginModal();
+
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -60,7 +64,7 @@ function MyPage() {
         .then(() => setLoading(false))
         .catch(() => setLoading(false));
     } else {
-      navigate("/login");
+      navigate("/news"); 
     }
   }, [user, navigate]);
 
@@ -119,7 +123,7 @@ function MyPage() {
                   onClick={() => setShowPasswordModal(true)}
                   className="text-sm px-3 py-1 bg-gray-200 rounded"
                 >
-                  change password
+                  비밀번호 변경
                 </button>
                 <button
                   onClick={handleLogout}
@@ -131,30 +135,30 @@ function MyPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => setShowEditModal(true)}
-              className="w-28 h-28 bg-gray-200 rounded text-center font-medium text-sm flex items-center justify-center"
+              className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex items-center justify-center text-sm font-medium"
             >
-              edit profile
+              프로필 편집
             </button>
             <button
               onClick={() => scrollToSection(ratingsRef)}
-              className="w-28 h-28 bg-gray-200 rounded text-center font-medium text-sm flex items-center justify-center"
+              className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex items-center justify-center text-sm font-medium"
             >
-              ratings
+              평점
             </button>
             <button
               onClick={() => scrollToSection(reviewsRef)}
-              className="w-28 h-28 bg-gray-200 rounded text-center font-medium text-sm flex items-center justify-center"
+              className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex items-center justify-center text-sm font-medium"
             >
-              reviews
+              리뷰
             </button>
             <button
               onClick={() => scrollToSection(savedRef)}
-              className="w-28 h-28 bg-gray-200 rounded text-center font-medium text-sm flex items-center justify-center"
+              className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex items-center justify-center text-sm font-medium"
             >
-              SAVED
+              보관함
             </button>
           </div>
         </div>
@@ -171,15 +175,21 @@ function MyPage() {
 
           return (
             <div key={groupKey} className="mb-4">
-              <h4 className="font-bold mb-2">{groupKey}</h4>
+              <h4 className="font-bold mb-4 flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full border-4 border-black flex items-center justify-center text-xl font-bold">
+                  {groupKey}
+                </div>
+              </h4>
               <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
                 {visibleAlbums.map((album) => (
                   <div key={album.slug} className="text-center">
+                  <Link to={`/album/${album.artist_slug}/${album.slug}`}>
                     <img
                       src={album.image_url}
                       alt={album.title}
-                      className="w-20 h-20 object-cover rounded mx-auto"
+                      className="w-20 h-20 object-cover rounded mx-auto cursor-pointer hover:opacity-80 transition"
                     />
+                  </Link>
                     <p className="text-xs mt-1">{album.title}</p>
                     <p className="text-xs text-gray-500">{album.rating}</p>
                   </div>
@@ -193,7 +203,7 @@ function MyPage() {
                       [groupKey]: visibleCount + 8,
                     }))
                   }
-                  className="mt-2 text-sm text-blue-500 underline"
+                  className="mt-2 text-sm bg-gray-100 px-3 py-1 rounded hover:bg-gray-200"
                 >
                   더보기
                 </button>

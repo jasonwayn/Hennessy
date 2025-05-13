@@ -61,20 +61,28 @@ exports.getReviews = (req, res) => {
         const albumId = albumResults[0].id;
 
         const query = `
-        SELECT r.id, r.review_text, r.created_at, u.nickname, u.profile_image_url AS profile_image,
-               COUNT(rl.id) AS like_count,
-               CASE WHEN rl2.user_id IS NOT NULL THEN 1 ELSE 0 END AS liked
-        FROM reviews r
-        JOIN users u ON r.user_id = u.id
-        LEFT JOIN review_likes rl ON r.id = rl.review_id
-        LEFT JOIN review_likes rl2 ON rl2.review_id = r.id AND rl2.user_id = ?
-        WHERE r.album_id = ?
-        GROUP BY r.id, r.review_text, r.created_at, u.nickname, u.profile_image_url, rl2.user_id
-        ORDER BY ${sort}
-      `;
+          SELECT
+            r.id,
+            r.review_text,
+            r.created_at,
+            u.nickname,
+            u.profile_image_url AS profile_image,
+            COUNT(rl.id) AS like_count,
+            CASE WHEN rl2.user_id IS NOT NULL THEN 1 ELSE 0 END AS liked,
+            CASE WHEN sr.user_id IS NOT NULL THEN 1 ELSE 0 END AS saved,  
+            CASE WHEN r.user_id = ? THEN 1 ELSE 0 END AS is_owner
+          FROM reviews r
+          JOIN users u ON r.user_id = u.id
+          LEFT JOIN review_likes rl ON r.id = rl.review_id
+          LEFT JOIN review_likes rl2 ON rl2.review_id = r.id AND rl2.user_id = ?
+          LEFT JOIN saved_reviews sr ON sr.review_id = r.id AND sr.user_id = ?
+          WHERE r.album_id = ?
+          GROUP BY r.id, r.review_text, r.created_at, u.nickname, u.profile_image_url, rl2.user_id, sr.review_id, r.user_id
+          ORDER BY ${sort}
+        `;
 
-
-        db.query(query, [userId, albumId], (err3, results) => {
+        // ?가 4개 사용되었으므로 userId 3개, albumId 1개 순서로 전달
+        db.query(query, [userId, userId, userId, albumId], (err3, results) => {
           if (err3) {
             console.error("리뷰 조회 쿼리 실패:", err3);
             return res.status(500).json({ message: "리뷰 조회 실패" });
@@ -85,6 +93,53 @@ exports.getReviews = (req, res) => {
     );
   });
 };
+
+//리뷰 조회 (비회원)
+exports.getReviewsPublic = (req, res) => {
+  const { slug } = req.params;
+  const sort =
+    req.query.sort === "recent"
+      ? "r.created_at DESC"
+      : "like_count DESC, r.created_at DESC";
+
+  db.query(
+    "SELECT id FROM albums WHERE slug = ?",
+    [slug],
+    (err, albumResults) => {
+      if (err || albumResults.length === 0) {
+        return res.status(404).json({ message: "앨범 없음" });
+      }
+
+      const albumId = albumResults[0].id;
+
+      const query = `
+        SELECT
+          r.id,
+          r.review_text,
+          r.created_at,
+          u.nickname,
+          u.profile_image_url AS profile_image,
+          COUNT(rl.id) AS like_count
+        FROM reviews r
+        JOIN users u ON r.user_id = u.id
+        LEFT JOIN review_likes rl ON r.id = rl.review_id
+        WHERE r.album_id = ?
+        GROUP BY r.id, r.review_text, r.created_at, u.nickname, u.profile_image_url
+        ORDER BY ${sort}
+      `;
+
+      db.query(query, [albumId], (err2, results) => {
+        if (err2) {
+          console.error("리뷰 조회 실패:", err2);
+          return res.status(500).json({ message: "리뷰 조회 실패" });
+        }
+        res.json(results);
+      });
+    }
+  );
+};
+
+
 
 
 // 리뷰 좋아요 토글

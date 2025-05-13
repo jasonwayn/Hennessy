@@ -17,22 +17,15 @@ function NewsDetailPage() {
       try {
         const res = await axios.get(`/api/news/${id}`);
         setNews(res.data);
+        if (user && res.data.user_email === user.email) {
+          setIsAuthor(true);
+        }
       } catch (err) {
         console.error("뉴스 불러오기 실패:", err);
       }
     };
-
-    const checkAuthor = async () => {
-      if (!user) return;
-      const token = await getToken();
-      const res = await axios.get("/api/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setIsAuthor(res.data && res.data.email === user.email);
-    };
-
+  
     fetchNews();
-    checkAuthor();
   }, [id, user]);
 
   const handleDelete = async () => {
@@ -83,7 +76,10 @@ function NewsDetailPage() {
       {/* 수정/삭제 버튼 */}
       {isAuthor && (
         <div className="flex gap-4">
-          <Link to={`/news/edit/${id}`} className="bg-yellow-500 text-white px-4 py-2 rounded">
+          <Link
+            to={`/news/edit/${id}`}
+            className="bg-yellow-500 text-white px-4 py-2 rounded"
+          >
             수정
           </Link>
           <button

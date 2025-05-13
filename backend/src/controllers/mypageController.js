@@ -34,43 +34,46 @@ exports.getMyReviews = (req, res) => {
 
 // 평점 구간별 앨범 정리
 exports.getUserRatingsGrouped = (req, res) => {
-    const userEmail = req.user.email;
-  
-    const getUserIdQuery = "SELECT id FROM users WHERE email = ?";
-    db.query(getUserIdQuery, [userEmail], (err, userResults) => {
-      if (err || userResults.length === 0) {
-        return res.status(401).json({ message: "유저 인증 실패" });
+  const userEmail = req.user.email;
+
+  const getUserIdQuery = "SELECT id FROM users WHERE email = ?";
+  db.query(getUserIdQuery, [userEmail], (err, userResults) => {
+    if (err || userResults.length === 0) {
+      return res.status(401).json({ message: "유저 인증 실패" });
+    }
+
+    const userId = userResults[0].id;
+
+    const ratingGroupQuery = `
+      SELECT
+        FLOOR(ar.rating) AS rating_group,
+        JSON_ARRAYAGG(
+          JSON_OBJECT(
+            'title', al.title,
+            'slug', al.slug,
+            'image_url', al.image_url,
+            'rating', ar.rating,
+            'artist_slug', at.slug
+          )
+        ) AS albums
+      FROM album_ratings ar
+      JOIN albums al ON ar.album_id = al.id
+      JOIN artists at ON al.artist_id = at.id
+      WHERE ar.user_id = ?
+      GROUP BY rating_group
+      ORDER BY rating_group DESC
+    `;
+
+    db.query(ratingGroupQuery, [userId], (err2, results) => {
+      if (err2) {
+        console.error("평점 그룹 조회 실패:", err2);
+        return res.status(500).json({ message: "DB 오류" });
       }
-  
-      const userId = userResults[0].id;
-  
-      const ratingGroupQuery = `
-        SELECT
-          FLOOR(ar.rating) AS rating_group,
-          JSON_ARRAYAGG(
-            JSON_OBJECT(
-              'title', al.title,
-              'slug', al.slug,
-              'image_url', al.image_url,
-              'rating', ar.rating
-            )
-          ) AS albums
-        FROM album_ratings ar
-        JOIN albums al ON ar.album_id = al.id
-        WHERE ar.user_id = ?
-        GROUP BY rating_group
-        ORDER BY rating_group DESC
-      `;
-  
-      db.query(ratingGroupQuery, [userId], (err2, results) => {
-        if (err2) {
-          console.error("평점 그룹 조회 실패:", err2);
-          return res.status(500).json({ message: "DB 오류" });
-        }
-        res.json(results);
-      });
+      res.json(results);
     });
-  };
+  });
+};
+
 
 //프로필 편집 (username) 
 exports.updateProfileInfo = (req, res) => {

@@ -3,8 +3,8 @@ const mysql = require("mysql2");
 
 const db = mysql.createConnection({
   host: "localhost",
-  user: "root",
-  password: "kweb", // 환경변수로 바꾸는 게 좋음
+  user: "nodeuser",
+  password: "nodepass123!", 
   database: "hennessy_db"
 });
 

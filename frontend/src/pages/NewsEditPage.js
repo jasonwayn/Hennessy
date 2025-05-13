@@ -1,44 +1,59 @@
-// src/pages/NewsEditPage.jsx
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { getToken } from "../utils/getToken";
 import { useAuth } from "../contexts/AuthContext";
+import { useLoginModal } from "../contexts/LoginModalContext";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { v4 as uuidv4 } from "uuid";
 
 function NewsEditPage() {
   const { id } = useParams();
   const isEdit = !!id;
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { openLoginModal } = useLoginModal();
 
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (!user) {
       alert("로그인이 필요합니다.");
-      navigate("/login");
+      openLoginModal();
       return;
     }
 
     if (isEdit) {
-      axios
-        .get(`/api/news/${id}`)
-        .then((res) => {
-          const n = res.data;
-          setTitle(n.title);
-          setSummary(n.summary || "");
-          setContent(n.content);
-          setImageUrl(n.image_url || "");
-        })
-        .catch(() => {
+      (async () => {
+        try {
+          const token = await getToken();
+          const res = await axios.get(`/api/news/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          const news = res.data;
+
+          if (news.email && news.email !== user.email) {
+            alert("수정 권한이 없습니다.");
+            navigate("/news");
+            return;
+          }
+
+          setTitle(news.title);
+          setSummary(news.summary || "");
+          setContent(news.content);
+          setImageUrl(news.image_url || "");
+        } catch (err) {
           alert("뉴스 정보를 불러올 수 없습니다.");
           navigate("/news");
-        });
+        }
+      })();
     }
-  }, [id, isEdit, user, navigate]);
+  }, [id, isEdit, user, navigate, openLoginModal]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -75,45 +90,76 @@ function NewsEditPage() {
     }
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const storage = getStorage();
+      const fileRef = ref(storage, `news/${uuidv4()}-${file.name}`);
+      await uploadBytes(fileRef, file);
+      const url = await getDownloadURL(fileRef);
+      setImageUrl(url);
+    } catch (err) {
+      console.error("이미지 업로드 실패:", err);
+      alert("이미지 업로드 실패");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto p-6">
       <h2 className="text-2xl font-bold mb-4">{isEdit ? "뉴스 수정" : "뉴스 등록"}</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="text"
-          placeholder="제목"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-        />
-        <input
-          type="text"
-          placeholder="요약 (1~2문장)"
-          value={summary}
-          onChange={(e) => setSummary(e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-        />
-        <input
-          type="text"
-          placeholder="이미지 URL"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-        />
-        {imageUrl && (
-          <img
-            src={imageUrl}
-            alt="미리보기"
-            className="w-full h-64 object-cover rounded mb-2"
+        <div>
+          <label className="block mb-1 font-semibold">제목</label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full border px-3 py-2 rounded"
           />
-        )}
-        <textarea
-          placeholder="내용"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          rows={10}
-          className="w-full border px-3 py-2 rounded"
-        ></textarea>
+        </div>
+
+        <div>
+          <label className="block mb-1 font-semibold">요약</label>
+          <input
+            type="text"
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            className="w-full border px-3 py-2 rounded"
+          />
+        </div>
+
+        <div>
+          <label className="block mb-1 font-semibold">이미지 업로드</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="block"
+          />
+          {uploading && <p className="text-sm text-gray-500">업로드 중...</p>}
+          {imageUrl && (
+            <img
+              src={imageUrl}
+              alt="미리보기"
+              className="w-full h-64 object-cover rounded mt-2"
+            />
+          )}
+        </div>
+
+        <div>
+          <label className="block mb-1 font-semibold">내용</label>
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            rows={10}
+            className="w-full border px-3 py-2 rounded"
+          />
+        </div>
+
         <button
           type="submit"
           className="bg-blue-600 text-white px-6 py-2 rounded"

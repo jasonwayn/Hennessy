@@ -12,26 +12,30 @@ import ArtistPage from "./pages/ArtistPage";
 import EditProfile from "./pages/EditProfile"; 
 import AddContentPage from "./pages/AddContentPage";
 import SongPage from "./pages/SongPage";
+import { LoginModalProvider } from "./contexts/LoginModalContext.js";
+
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/mypage" element={<MyPage />} />
-            <Route path="/album/:artistSlug/:albumSlug" element={<AlbumPage />} />
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="/albums" element={<AlbumsPage />} />
-            <Route path="/news" element={<NewsPage />} />
-            <Route path="/news/:id" element={<NewsDetailPage />} />
-            <Route path="/news/edit/:id?" element={<NewsEditPage />} />
-            <Route path="/artist/:slug" element={<ArtistPage />} />
-            <Route path="/edit-profile" element={<EditProfile />} /> 
-            <Route path="/add" element={<AddContentPage />} />
-            <Route path="/songs/:id" element={<SongPage />} />
-          </Route>
-        </Routes>
+        <LoginModalProvider> 
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/mypage" element={<MyPage />} />
+              <Route path="/album/:artistSlug/:albumSlug" element={<AlbumPage />} />
+              <Route path="/search" element={<SearchPage />} />
+              <Route path="/albums" element={<AlbumsPage />} />
+              <Route path="/news" element={<NewsPage />} />
+              <Route path="/news/:id" element={<NewsDetailPage />} />
+              <Route path="/news/edit/:id?" element={<NewsEditPage />} />
+              <Route path="/artist/:slug" element={<ArtistPage />} />
+              <Route path="/edit-profile" element={<EditProfile />} />
+              <Route path="/add" element={<AddContentPage />} />
+              <Route path="/songs/:id" element={<SongPage />} />
+            </Route>
+          </Routes>
+        </LoginModalProvider>
       </AuthProvider>
     </BrowserRouter>
   );

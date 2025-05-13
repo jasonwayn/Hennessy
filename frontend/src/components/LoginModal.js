@@ -28,7 +28,7 @@ function LoginModal({ onClose }) {
       await signInWithEmailAndPassword(auth, email, password);
       alert("로그인 성공!");
       onClose();
-      navigate("/mypage");
+      navigate(-1);
     } catch (error) {
       console.error(error);
       alert("로그인 실패: " + error.message);
