@@ -56,6 +56,7 @@ exports.getSongDetail = (req, res) => {
     SELECT 
       s.*, 
       a.title AS album_title,
+      a.slug AS album_slug,
       a.image_url AS album_image_url,
       a.description AS album_description,
       ar.name AS artist_name,
@@ -78,5 +79,20 @@ exports.getSongDetail = (req, res) => {
     }
 
     res.json(results[0]);
+  });
+};
+
+// 곡 정보 수정
+exports.updateSongDetails = (req, res) => {
+  const songId = req.params.id;
+  const { description, credits } = req.body;
+
+  const query = `UPDATE songs SET description = ?, credits = ? WHERE id = ?`;
+  db.query(query, [description, credits, songId], (err, result) => {
+    if (err) {
+      console.error("곡 정보 업데이트 실패:", err);
+      return res.status(500).json({ message: "DB 오류" });
+    }
+    res.json({ message: "곡 정보 업데이트 완료" });
   });
 };

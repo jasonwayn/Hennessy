@@ -4,6 +4,7 @@ import axios from "axios";
 import { getToken } from "../utils/getToken";
 import { useLoginModal } from "../contexts/LoginModalContext";
 import { useAuth } from "../contexts/AuthContext";
+import { useLocation } from "react-router-dom";
 
 function AlbumPage() {
   const { artistSlug, albumSlug } = useParams();
@@ -18,6 +19,7 @@ function AlbumPage() {
   const [sortOrder, setSortOrder] = useState("likes");
   const { openLoginModal } = useLoginModal();
   const { user } = useAuth();
+  const location = useLocation();
 
   // ✅ 앨범 정보 및 내 평점 로딩
   useEffect(() => {
@@ -65,6 +67,38 @@ function AlbumPage() {
     };
     fetch();
   }, [albumSlug, sortOrder, user]);
+
+    useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const targetId = params.get("reviewId");
+
+    if (targetId) {
+      setTimeout(() => {
+        const target = document.getElementById(`review-${targetId}`);
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+          target.classList.add("ring", "ring-blue-500"); // 강조 효과도 가능
+          setTimeout(() => target.classList.remove("ring", "ring-blue-500"), 2000);
+        }
+      }, 500); // 렌더 완료 이후 실행
+    }
+  }, [reviews, location.search]);
+
+  useEffect(() => {
+  const reviewId = window.location.hash?.split("review-")[1];
+  if (reviewId) {
+    setTimeout(() => {
+      const target = document.getElementById(`review-${reviewId}`);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        target.classList.add("ring", "ring-blue-500");
+        setTimeout(() => target.classList.remove("ring", "ring-blue-500"), 2000);
+      }
+    }, 500);
+  }
+}, [reviews]);
+
+
 
 const fetchReviews = async () => {
   const token = await getToken();
@@ -278,18 +312,39 @@ const fetchReviews = async () => {
 
 <ul className="space-y-6">
   {reviews.map((review) => (
-    <li key={review.id} className="border-b pb-4">
-      <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-        {review.profile_image && (
-          <img
-            src={review.profile_image}
-            alt="프로필"
-            className="w-8 h-8 rounded-full"
-          />
-        )}
-        <p>{review.nickname}</p>
+    <li key={review.id} id={`review-${review.id}`} className="border-b pb-4">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-3 text-sm text-gray-700">
+          {review.profile_image && (
+            <img
+              src={review.profile_image}
+              alt="프로필"
+              className="w-8 h-8 rounded-full"
+            />
+          )}
+            <Link
+              to={`/user/${review.user_id}`}
+              className="font-semibold text-blue-600 hover:underline"
+            >
+              {review.nickname}
+            </Link>
+          <div className="w-12 h-12 rounded-full border-4 border-black flex items-center justify-center text-lg font-bold ml-2">
+            {Number.isFinite(parseFloat(review.user_rating))
+              ? parseFloat(review.user_rating).toFixed(1)
+              : "-"}
+          </div>
+        </div>
+
+        {/* 오른쪽: 작성일 (YYYY.MM.DD) */}
+        <span className="text-xs text-gray-500">
+          {new Date(review.created_at).toISOString().slice(0, 10).replace(/-/g, ".")}
+        </span>
       </div>
-      <p className="mb-2">{review.review_text}</p>
+
+      {/* 리뷰 본문 */}
+      <p className="mb-2 text-gray-800 whitespace-pre-line">{review.review_text}</p>
+
+      {/* 좋아요/저장/수정/삭제 버튼 */}
       <div className="flex gap-4 text-sm">
         <button
           onClick={() => handleLikeToggle(review.id)}
@@ -316,9 +371,7 @@ const fetchReviews = async () => {
               삭제
             </button>
           </>
-        ) : null}
-
-        {!review.is_owner && (
+        ) : (
           <button
             onClick={() => handleSaveToggle(review.id)}
             className={`text-sm ${

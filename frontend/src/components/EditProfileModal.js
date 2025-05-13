@@ -94,7 +94,7 @@ function EditProfileModal({ onClose, currentNickname, currentBio, onUpdate }) {
           onChange={(e) => setNickname(e.target.value)}
         />
 
-        <label className="text-sm font-medium">Bio</label>
+        <label className="text-sm font-medium">소개</label>
         <textarea
           className="w-full border p-2 rounded mb-3"
           maxLength={100}
@@ -113,6 +113,7 @@ function EditProfileModal({ onClose, currentNickname, currentBio, onUpdate }) {
               zoom={zoom}
               rotation={rotation}
               aspect={1}
+              cropShape="round"
               onCropChange={setCrop}
               onZoomChange={setZoom}
               onRotationChange={setRotation}

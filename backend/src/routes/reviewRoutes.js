@@ -10,6 +10,7 @@ router.delete("/reviews/:id", authenticateFirebaseToken, reviewController.delete
 router.post("/reviews/:reviewId/save", authenticateFirebaseToken, reviewController.toggleSaveReview);
 router.get("/album/:slug/reviews", authenticateFirebaseToken, reviewController.getReviews);
 router.get("/album/:slug/reviews/public", reviewController.getReviewsPublic);
-
+router.get("/mypage/saved-reviews", authenticateFirebaseToken, reviewController.getSavedReviews);
+router.get("/mypage/reviews", authenticateFirebaseToken, reviewController.getMyReviews);
 
 module.exports = router;

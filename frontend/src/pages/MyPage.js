@@ -9,6 +9,7 @@ import { Link } from "react-router-dom";
 import EditProfileModal from "../components/EditProfileModal";
 import ChangePasswordModal from "../components/ChangePasswordModal";
 import { useLoginModal } from "../contexts/LoginModalContext.js";
+import { useParams } from "react-router-dom";
 
 function MyPage() {
   const { user } = useAuth();
@@ -29,7 +30,8 @@ function MyPage() {
   const reviewsRef = useRef(null);
   const savedRef = useRef(null);
   const { openLoginModal } = useLoginModal();
-
+  const { nickname: routeNickname } = useParams();
+  const isMyPage = !routeNickname || routeNickname === user?.nickname;
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -60,7 +62,7 @@ function MyPage() {
     };
 
     if (user) {
-      Promise.all([fetchProfile(), fetchReviews(), fetchRatings()])
+      Promise.all([fetchProfile(), fetchReviews(), fetchRatings(), fetchSavedReviews(),])
         .then(() => setLoading(false))
         .catch(() => setLoading(false));
     } else {
@@ -76,11 +78,6 @@ function MyPage() {
     });
     setReviews((prev) => [...prev, ...res.data]);
     setOffset(nextOffset);
-  };
-
-  const getVisibleAlbums = (groupKey, albums) => {
-    const count = expandedRatings[groupKey] || 8;
-    return albums.slice(0, count);
   };
 
   const handleLogout = async () => {
@@ -107,41 +104,39 @@ function MyPage() {
     <div className="max-w-6xl mx-auto">
       <div className="bg-[#f9dad6] p-8 mb-10 rounded">
         <div className="flex justify-between items-start">
-          <div className="flex items-center gap-6">
+          <div className="flex items-start gap-6">
             {profileImage && (
               <img
                 src={profileImage}
                 alt="프로필 이미지"
-                className="w-28 h-28 rounded-full object-cover"
+                className="w-48 h-48 rounded-full object-cover shadow"
               />
             )}
             <div>
-              <p className="text-2xl font-bold">{nickname || "닉네임 없음"}</p>
-              <p className="text-sm text-gray-600 mb-3">{user.email}</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowPasswordModal(true)}
-                  className="text-sm px-3 py-1 bg-gray-200 rounded"
-                >
-                  비밀번호 변경
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="text-sm px-3 py-1 bg-red-500 text-white rounded"
-                >
-                  로그아웃
-                </button>
-              </div>
+              <p className="text-4xl font-bold">{nickname || "닉네임 없음"}</p>
+              <p className="text-base text-gray-600 mb-3">{user.email}</p>
+                {isMyPage && (
+                  <div className="flex gap-2">
+                    <button onClick={() => setShowPasswordModal(true)} className="text-sm px-3 py-1 bg-gray-200 rounded">
+                      비밀번호 변경
+                    </button>
+                    <button onClick={handleLogout} className="text-sm px-3 py-1 bg-red-500 text-white rounded">
+                      로그아웃
+                    </button>
+                  </div>
+                )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => setShowEditModal(true)}
-              className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex items-center justify-center text-sm font-medium"
-            >
-              프로필 편집
-            </button>
+            {isMyPage && (
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex items-center justify-center text-sm font-medium"
+              >
+                프로필 편집
+              </button>
+            )}
             <button
               onClick={() => scrollToSection(ratingsRef)}
               className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex items-center justify-center text-sm font-medium"
@@ -215,14 +210,25 @@ function MyPage() {
 
       <div ref={reviewsRef} className="mb-10">
         <h3 className="text-xl font-semibold mb-2 border-l-4 pl-2 border-[#db4c3f]">내 리뷰</h3>
-        {reviews.map((r) => (
-          <div key={r.id} className="border p-4 rounded mb-2">
-            <p className="text-gray-700 mb-1">{r.review_text}</p>
-            <p className="text-sm text-gray-500">
-              {r.artist_name} - {r.album_title}
-            </p>
-          </div>
-        ))}
+          {reviews.map((r) => (
+            <Link
+              key={r.id}
+              to={`/album/${r.artist_slug}/${r.album_slug}#review-${r.id}`}
+              className="flex gap-4 border p-4 rounded mb-2 hover:bg-gray-50 transition"
+            >
+              <img
+                src={r.image_url}
+                alt={r.album_title}
+                className="w-16 h-16 object-cover rounded"
+              />
+              <div className="flex-1">
+                <p className="text-gray-800 mb-1 line-clamp-2">{r.review_text}</p>
+                <p className="text-sm text-gray-500">
+                  {r.artist_name} - {r.album_title}
+                </p>
+              </div>
+            </Link>
+          ))}
         <button onClick={loadMoreReviews} className="mt-2 text-blue-500 underline">
           더보기
         </button>
@@ -235,11 +241,21 @@ function MyPage() {
         ) : (
           <ul className="space-y-4">
             {savedReviews.map((review) => (
-              <li key={review.id} className="border p-4 rounded">
-                <p className="text-gray-800 mb-1">{review.review_text}</p>
-                <div className="text-sm text-gray-500">
-                  {review.nickname} / {review.artist_name} - {review.album_title}
-                </div>
+              <li key={review.id} className="flex gap-4 border p-4 rounded">
+                <img
+                  src={review.image_url}
+                  alt={review.album_title}
+                  className="w-16 h-16 object-cover rounded"
+                />
+                <Link
+                  to={`/album/${review.artist_slug}/${review.album_slug}?reviewId=${review.id}`}
+                  className="flex-1"
+                >
+                  <p className="text-gray-800 mb-1 line-clamp-2">{review.review_text}</p>
+                  <div className="text-sm text-gray-500">
+                    {review.nickname} / {review.artist_name} - {review.album_title}
+                  </div>
+                </Link>
               </li>
             ))}
           </ul>

@@ -13,6 +13,7 @@ import EditProfile from "./pages/EditProfile";
 import AddContentPage from "./pages/AddContentPage";
 import SongPage from "./pages/SongPage";
 import { LoginModalProvider } from "./contexts/LoginModalContext.js";
+import UserPage from "./pages/UserPage";
 
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
           <Routes>
             <Route element={<Layout />}>
               <Route path="/mypage" element={<MyPage />} />
+              <Route path="/user/:id" element={<UserPage />} />
               <Route path="/album/:artistSlug/:albumSlug" element={<AlbumPage />} />
               <Route path="/search" element={<SearchPage />} />
               <Route path="/albums" element={<AlbumsPage />} />

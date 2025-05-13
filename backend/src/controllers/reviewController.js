@@ -65,19 +65,22 @@ exports.getReviews = (req, res) => {
             r.id,
             r.review_text,
             r.created_at,
+            u.id AS user_id,
             u.nickname,
             u.profile_image_url AS profile_image,
             COUNT(rl.id) AS like_count,
             CASE WHEN rl2.user_id IS NOT NULL THEN 1 ELSE 0 END AS liked,
             CASE WHEN sr.user_id IS NOT NULL THEN 1 ELSE 0 END AS saved,  
-            CASE WHEN r.user_id = ? THEN 1 ELSE 0 END AS is_owner
+            CASE WHEN r.user_id = ? THEN 1 ELSE 0 END AS is_owner,
+            ar.rating AS user_rating
           FROM reviews r
           JOIN users u ON r.user_id = u.id
           LEFT JOIN review_likes rl ON r.id = rl.review_id
           LEFT JOIN review_likes rl2 ON rl2.review_id = r.id AND rl2.user_id = ?
           LEFT JOIN saved_reviews sr ON sr.review_id = r.id AND sr.user_id = ?
+          LEFT JOIN album_ratings ar ON ar.album_id = r.album_id AND ar.user_id = r.user_id
           WHERE r.album_id = ?
-          GROUP BY r.id, r.review_text, r.created_at, u.nickname, u.profile_image_url, rl2.user_id, sr.review_id, r.user_id
+          GROUP BY r.id, r.review_text, r.created_at, u.nickname, u.profile_image_url, rl2.user_id, sr.review_id, r.user_id, ar.rating
           ORDER BY ${sort}
         `;
 
@@ -117,6 +120,7 @@ exports.getReviewsPublic = (req, res) => {
           r.id,
           r.review_text,
           r.created_at,
+          u.id AS user_id,
           u.nickname,
           u.profile_image_url AS profile_image,
           COUNT(rl.id) AS like_count
@@ -124,7 +128,7 @@ exports.getReviewsPublic = (req, res) => {
         JOIN users u ON r.user_id = u.id
         LEFT JOIN review_likes rl ON r.id = rl.review_id
         WHERE r.album_id = ?
-        GROUP BY r.id, r.review_text, r.created_at, u.nickname, u.profile_image_url
+        GROUP BY r.id, r.review_text, r.created_at, u.id, u.nickname, u.profile_image_url
         ORDER BY ${sort}
       `;
 
@@ -281,3 +285,84 @@ exports.toggleSaveReview = (req, res) => {
     });
   });
 };
+
+exports.getSavedReviews = (req, res) => {
+  const userEmail = req.user.email;
+
+  db.query("SELECT id FROM users WHERE email = ?", [userEmail], (err, userResults) => {
+    if (err || userResults.length === 0) {
+      return res.status(401).json({ message: "유저 인증 실패" });
+    }
+
+    const userId = userResults[0].id;
+
+    const query = `
+      SELECT 
+        r.id,
+        r.review_text,
+        r.created_at,
+        u.id AS user_id,
+        u.nickname,
+        a.title AS album_title,
+        a.slug AS album_slug,
+        a.image_url,
+        ar.name AS artist_name,
+        ar.slug AS artist_slug
+      FROM saved_reviews sr
+      JOIN reviews r ON sr.review_id = r.id
+      JOIN users u ON r.user_id = u.id
+      JOIN albums a ON r.album_id = a.id
+      JOIN artists ar ON a.artist_id = ar.id
+      WHERE sr.user_id = ?
+      ORDER BY r.created_at DESC
+    `;
+
+    db.query(query, [userId], (err2, results) => {
+      if (err2) {
+        console.error("저장된 리뷰 조회 실패:", err2);
+        return res.status(500).json({ message: "조회 실패" });
+      }
+      res.json(results);
+    });
+  });
+};
+
+exports.getMyReviews = (req, res) => {
+  const userEmail = req.user.email;
+
+  db.query("SELECT id FROM users WHERE email = ?", [userEmail], (err, userResults) => {
+    if (err || userResults.length === 0) {
+      return res.status(401).json({ message: "유저 인증 실패" });
+    }
+
+    const userId = userResults[0].id;
+    const offset = parseInt(req.query.offset) || 0;
+
+    const query = `
+      SELECT 
+        r.id,
+        r.review_text,
+        r.created_at,
+        a.title AS album_title,
+        a.slug AS album_slug,
+        a.image_url,
+        ar.name AS artist_name,
+        ar.slug AS artist_slug
+      FROM reviews r
+      JOIN albums a ON r.album_id = a.id
+      JOIN artists ar ON a.artist_id = ar.id
+      WHERE r.user_id = ?
+      ORDER BY r.created_at DESC
+      LIMIT 10 OFFSET ?
+    `;
+
+    db.query(query, [userId, offset], (err2, results) => {
+      if (err2) {
+        console.error("내 리뷰 조회 실패:", err2);
+        return res.status(500).json({ message: "조회 실패" });
+      }
+      res.json(results);
+    });
+  });
+};
+

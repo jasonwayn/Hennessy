@@ -2,6 +2,8 @@ import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { getToken } from "../utils/getToken";
+import { Link } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 function SongPage() {
   const { id } = useParams();
@@ -13,21 +15,25 @@ function SongPage() {
   const [newAnnotation, setNewAnnotation] = useState("");
   const [description, setDescription] = useState("");
   const [credits, setCredits] = useState("");
-
-  useEffect(() => {
-    axios
-      .get(`/api/songs/${id}`)
-      .then((res) => {
-        setSong(res.data);
-        setDescription(res.data.description || "");
-        setCredits(res.data.credits || "");
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("곡 정보 로딩 실패:", err);
-        setLoading(false);
-      });
-  }, [id]);
+  const [isEditing, setIsEditing] = useState(false);
+  const { user } = useAuth();
+  
+useEffect(() => {
+  axios
+    .get(`/api/songs/${id}`)
+    .then((res) => {
+      console.log("곡 상세 데이터 확인:", res.data.album_slug, res.data);
+      const data = res.data;
+      setSong(res.data);
+      setDescription(data.description || "");
+      setCredits(data.credits || "");
+      setLoading(false);
+    })
+    .catch((err) => {
+      console.error("곡 정보 로딩 실패:", err);
+      setLoading(false);
+    });
+}, [id]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -88,6 +94,7 @@ function SongPage() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       alert("곡 정보가 저장되었습니다.");
+      setIsEditing(false);
     } catch (err) {
       console.error("곡 정보 저장 실패:", err);
       alert("저장 중 오류 발생");
@@ -107,6 +114,52 @@ function SongPage() {
       </p>
     ));
 
+  const handleEditAnnotation = async (annotationId, newContent) => {
+  try {
+    const token = await getToken();
+    await axios.patch(`/api/song-annotations/${annotationId}`, {
+      content: newContent,
+    }, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    alert("수정 완료");
+    handleLineClick(selectedText); // 주석 다시 불러오기
+  } catch (err) {
+    console.error("주석 수정 실패:", err);
+    alert("수정 중 오류 발생");
+  }
+};
+
+  const handleDeleteAnnotation = async (annotationId) => {
+  if (!window.confirm("정말 삭제하시겠습니까?")) return;
+
+  try {
+    const token = await getToken();
+    await axios.delete(`/api/song-annotations/${annotationId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    alert("삭제 완료");
+    handleLineClick(selectedText); // 주석 다시 불러오기
+  } catch (err) {
+    console.error("주석 삭제 실패:", err);
+    alert("삭제 중 오류 발생");
+  }
+};
+
+
+  const handleToggleLike = async (annotationId) => {
+  try {
+    const token = await getToken();
+    await axios.post(`/api/song-annotations/${annotationId}/like`, {}, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    handleLineClick(selectedText); // 새로고침 없이 상태 업데이트
+  } catch (err) {
+    console.error("좋아요 실패:", err);
+    alert("로그인이 필요하거나 오류가 발생했습니다.");
+  }
+};
+
   if (loading) return <div className="p-6 text-center">로딩 중...</div>;
   if (!song) return <div className="p-6 text-center">곡을 찾을 수 없습니다.</div>;
 
@@ -121,41 +174,67 @@ function SongPage() {
             className="w-full rounded shadow"
           />
           <div>
-            <h2 className="text-lg font-bold">앨범</h2>
-            <p>{song.album_title}</p>
+            <h2 className="text-sm text-gray-500 font-medium">앨범</h2>
+              <Link to={`/album/${song.artist_slug}/${song.album_slug}`} className="font-bold text-base hover:underline">
+                {song.album_title}
+              </Link>
           </div>
           <div>
-            <h2 className="text-lg font-bold">아티스트</h2>
-            <p>{song.artist_name}</p>
+            <h2 className="text-sm text-gray-500 font-medium">아티스트</h2>
+            <Link to={`/artist/${song.artist_slug}`} className="font-bold text-base hover:underline">
+              {song.artist_name}
+            </Link>
           </div>
 
-          {/* 편집 가능한 About & Credits */}
-          <div className="mt-4 space-y-4">
-            <div>
-              <label className="block font-semibold mb-1">About Song</label>
+          <button
+            onClick={() => setIsEditing(true)}
+            className="text-sm bg-gray-100 px-3 py-1 rounded hover:bg-gray-200"
+          >
+            편집
+          </button>
+
+          {/* About Song */}
+          <div>
+            <h2 className="font-semibold text-sm mt-4 mb-1">ABOUT SONG</h2>
+            {isEditing ? (
               <textarea
                 className="w-full border p-2 rounded"
                 rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
-            </div>
-            <div>
-              <label className="block font-semibold mb-1">Credits</label>
+            ) : (
+              <p className="text-sm text-gray-800 whitespace-pre-line">
+                {description || ""}
+              </p>
+            )}
+          </div>
+
+          {/* Credits */}
+          <div>
+            <h2 className="font-semibold text-sm mt-4 mb-1">CREDITS</h2>
+            {isEditing ? (
               <textarea
                 className="w-full border p-2 rounded"
                 rows={2}
                 value={credits}
                 onChange={(e) => setCredits(e.target.value)}
               />
-            </div>
+            ) : (
+              <p className="text-sm text-gray-800 whitespace-pre-line">
+                {credits || ""}
+              </p>
+            )}
+          </div>
+
+          {isEditing && (
             <button
               onClick={handleSaveDetails}
-              className="bg-blue-500 text-white px-4 py-2 rounded"
+              className="w-full mt-2 bg-black text-white py-2 rounded"
             >
               저장하기
             </button>
-          </div>
+          )}
         </div>
 
         {/* 중앙 가사 */}
@@ -214,14 +293,49 @@ function SongPage() {
                 {annotations.filter((a) => a.type === activeTab).length === 0 ? (
                   <p className="text-gray-500">아직 주석이 없습니다.</p>
                 ) : (
-                  annotations
-                    .filter((a) => a.type === activeTab)
-                    .map((a) => (
+                annotations
+                  .filter((a) => a.type === activeTab)
+                  .map((a) => {
+                    const isAuthor = user?.email === a.user_email; // 🔑 내가 작성한 주석인지 확인
+                  
+                    return (
                       <div key={a.id} className="mb-2 p-2 border rounded">
-                        <p className="text-sm text-gray-600 mb-1">{a.nickname}:</p>
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-sm text-gray-600">{a.nickname}</p>
+                          <div className="flex gap-2 items-center">
+                            <button
+                              onClick={() => handleToggleLike(a.id)}
+                              className="text-sm text-gray-500 hover:text-red-500"
+                            >
+                              ❤️ <span>{a.likes}개</span>
+                            </button>
+                              {isAuthor && (
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      const newContent = prompt("새 내용:", a.content);
+                                      if (newContent && newContent !== a.content) {
+                                        handleEditAnnotation(a.id, newContent);
+                                      }
+                                    }}
+                                    className="text-xs text-blue-600 hover:underline"
+                                  >
+                                    수정
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteAnnotation(a.id)}
+                                    className="text-xs text-red-600 hover:underline"
+                                  >
+                                    삭제
+                                  </button>
+                                </>
+                              )}
+                          </div>
+                        </div>
                         <p>{a.content}</p>
                       </div>
-                    ))
+                    );
+                  })
                 )}
               </div>
             </div>
