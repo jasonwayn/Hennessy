@@ -164,3 +164,42 @@ exports.getFilteredAlbums = (req, res) => {
     res.json(results);
   });
 };
+
+// 평균 평점 + 참여자 수 반환 (버그 FIX)
+exports.getAverageRating = (req, res) => {
+  const { albumSlug } = req.params;
+
+  const getAlbumIdQuery = `SELECT id FROM albums WHERE slug = ? LIMIT 1`;
+
+  db.query(getAlbumIdQuery, [albumSlug], (err1, albumResults) => {
+    if (err1 || albumResults.length === 0) {
+      console.error("앨범 ID 조회 실패:", err1);
+      return res.status(404).json({ message: "앨범 없음" });
+    }
+
+    const albumId = albumResults[0].id;
+
+    const ratingQuery = `
+      SELECT 
+        ROUND(AVG(r.rating), 1),
+        COUNT(r.rating)
+      FROM album_ratings r
+      WHERE r.album_id = ?
+    `;
+
+    db.query(ratingQuery, [albumId], (err2, ratingResults) => {
+      if (err2) {
+        console.error("평균 평점 조회 실패:", err2);
+        return res.status(500).json({ message: "DB 오류" });
+      }
+      const [averageRaw, countRaw] = Object.values(ratingResults[0] || {});
+      const average = averageRaw != null ? parseFloat(averageRaw) : null;
+      const count = countRaw != null ? Number(countRaw) : 0;
+      res.json({ average, count });
+    });
+  });
+};
+
+
+
+

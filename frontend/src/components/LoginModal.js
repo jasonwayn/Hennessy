@@ -26,7 +26,6 @@ function LoginModal({ onClose }) {
   const handleLogin = async () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      alert("로그인 성공!");
       onClose();
     } catch (error) {
       console.error(error);
@@ -93,7 +92,7 @@ function LoginModal({ onClose }) {
             }}
             className={`px-4 py-2 ${mode === "login" ? "font-bold border-b-2 border-black" : "text-gray-400"}`}
           >
-            Sign In
+            로그인
           </button>
           <button
             onClick={() => {
@@ -102,20 +101,20 @@ function LoginModal({ onClose }) {
             }}
             className={`px-4 py-2 ${mode === "signup" ? "font-bold border-b-2 border-black" : "text-gray-400"}`}
           >
-            Sign Up
+            회원가입
           </button>
         </div>
 
         <input
           type="email"
-          placeholder="Email"
+          placeholder="이메일"
           className="w-full border p-2 mb-2 rounded"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
         <input
           type="password"
-          placeholder="Password"
+          placeholder="비밀번호"
           className="w-full border p-2 mb-2 rounded"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -125,14 +124,14 @@ function LoginModal({ onClose }) {
           <>
             <input
               type="password"
-              placeholder="Password again"
+              placeholder="비밀번호 확인"
               className="w-full border p-2 mb-2 rounded"
               value={passwordAgain}
               onChange={(e) => setPasswordAgain(e.target.value)}
             />
             <input
               type="text"
-              placeholder="Nickname"
+              placeholder="닉네임"
               className="w-full border p-2 mb-4 rounded"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
@@ -144,7 +143,7 @@ function LoginModal({ onClose }) {
           onClick={mode === "login" ? handleLogin : handleSignup}
           className="w-full bg-blue-600 text-white p-2 rounded"
         >
-          {mode === "login" ? "Login" : "Register"}
+          {mode === "login" ? "로그인" : "회원가입"}
         </button>
 
         {mode === "login" && (

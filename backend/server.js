@@ -39,5 +39,5 @@ app.use("/api", albumRoutes);
 
 // 서버 실행
 app.listen(port, () => {
-  console.log(`🚀 서버 실행중: http://localhost:${port}`);
+  console.log(`서버 실행중: http://localhost:${port}`);
 });

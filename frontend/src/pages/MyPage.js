@@ -1,4 +1,3 @@
-// src/pages/MyPage.js
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -82,7 +81,6 @@ function MyPage() {
 
   const handleLogout = async () => {
     await signOut(auth);
-    alert("로그아웃 완료!");
     navigate("/news");
   };
 
@@ -100,6 +98,18 @@ function MyPage() {
 
   if (!user || loading) return <div className="p-8 text-center">로딩 중...</div>;
 
+  const StatButton = ({ label, count, onClick }) => (
+    <button
+      onClick={onClick}
+      className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex flex-col items-center justify-center text-sm font-medium"
+    >
+      <div>{label}</div>
+      <div className={`text-xs mt-1 ${count == null ? "text-transparent" : "text-gray-500"}`}>
+        {count ?? 0}
+      </div>
+    </button>
+  );
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="bg-[#f9dad6] p-8 mb-10 rounded">
@@ -115,53 +125,37 @@ function MyPage() {
             <div>
               <p className="text-4xl font-bold">{nickname || "닉네임 없음"}</p>
               <p className="text-base text-gray-600 mb-3">{user.email}</p>
-                {isMyPage && (
-                  <div className="flex gap-2">
-                    <button onClick={() => setShowPasswordModal(true)} className="text-sm px-3 py-1 bg-gray-200 rounded">
-                      비밀번호 변경
-                    </button>
-                    <button onClick={handleLogout} className="text-sm px-3 py-1 bg-red-500 text-white rounded">
-                      로그아웃
-                    </button>
-                  </div>
-                )}
+              {isMyPage && (
+                <div className="flex gap-2">
+                  <button onClick={() => setShowPasswordModal(true)} className="text-sm px-3 py-1 bg-gray-200 rounded">
+                    비밀번호 변경
+                  </button>
+                  <button onClick={handleLogout} className="text-sm px-3 py-1 bg-red-500 text-white rounded">
+                    로그아웃
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
-        <div className="grid grid-cols-2 gap-4 text-center">
-          {isMyPage && (
-            <button
-              onClick={() => setShowEditModal(true)}
-              className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex flex-col items-center justify-center text-sm font-medium"
-            >
-              <div>프로필 편집</div>
-            </button>
-          )}
-
-          <button
-            onClick={() => scrollToSection(ratingsRef)}
-            className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex flex-col items-center justify-center text-sm font-medium"
-          >
-            <div>평점</div>
-            <div className="text-xs mt-1 text-gray-500">{ratingsGrouped.reduce((acc, group) => acc + JSON.parse(group.albums).length, 0)}</div>
-          </button>
-        
-          <button
-            onClick={() => scrollToSection(reviewsRef)}
-            className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex flex-col items-center justify-center text-sm font-medium"
-          >
-            <div>리뷰</div>
-            <div className="text-xs mt-1 text-gray-500">{reviews.length}</div>
-          </button>
-        
-          <button
-            onClick={() => scrollToSection(savedRef)}
-            className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex flex-col items-center justify-center text-sm font-medium"
-          >
-            <div>보관함</div>
-            <div className="text-xs mt-1 text-gray-500">{savedReviews.length}</div>
-          </button>
-        </div>
+          <div className="grid grid-cols-2 gap-4 text-center">
+            {isMyPage && <StatButton label="프로필 편집" onClick={() => setShowEditModal(true)} />}
+            <StatButton
+              label="평점"
+              count={ratingsGrouped.reduce((acc, group) => acc + JSON.parse(group.albums).length, 0)}
+              onClick={() => scrollToSection(ratingsRef)}
+            />
+            <StatButton
+              label="리뷰"
+              count={reviews.length}
+              onClick={() => scrollToSection(reviewsRef)}
+            />
+            <StatButton
+              label="보관함"
+              count={savedReviews.length}
+              onClick={() => scrollToSection(savedRef)}
+            />
+          </div>
         </div>
       </div>
 

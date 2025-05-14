@@ -4,6 +4,8 @@ import axios from "axios";
 import { getToken } from "../utils/getToken";
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import AlertModal from "../components/AlertModal";
+import ConfirmModal from "../components/ConfirmModal";
 
 function SongPage() {
   const { id } = useParams();
@@ -23,6 +25,14 @@ function SongPage() {
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionResults, setMentionResults] = useState([]);
   const [showMentionDropdown, setShowMentionDropdown] = useState(false);
+  const [saveErrorModalOpen, setSaveErrorModalOpen] = useState(false);
+  const [editErrorModalOpen, setEditErrorModalOpen] = useState(false);
+  const [deleteErrorModalOpen, setDeleteErrorModalOpen] = useState(false);
+  const [likeErrorModalOpen, setLikeErrorModalOpen] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  const [editingId, setEditingId] = useState(null);
+  const [editingText, setEditingText] = useState("");
 
   useEffect(() => {
     axios
@@ -140,11 +150,10 @@ useEffect(() => {
         { description, credits },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert("곡 정보가 저장되었습니다.");
       setIsEditing(false);
     } catch (err) {
       console.error("곡 정보 저장 실패:", err);
-      alert("저장 중 오류 발생");
+      setSaveErrorModalOpen(true);
     }
   };
 
@@ -156,28 +165,31 @@ useEffect(() => {
         { content: newContent },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert("수정 완료");
       handleLineClick(selectedText);
     } catch (err) {
       console.error("주석 수정 실패:", err);
-      alert("수정 중 오류 발생");
+      setEditErrorModalOpen(true);
     }
   };
 
-  const handleDeleteAnnotation = async (annotationId) => {
-    if (!window.confirm("정말 삭제하시겠습니까?")) return;
+  const handleDeleteAnnotation = (annotationId) => {
+    setConfirmDeleteId(annotationId); // 삭제 모달 띄우기
+  };
+  
+  const confirmDelete = async () => {
     try {
       const token = await getToken();
-      await axios.delete(`/api/song-annotations/${annotationId}`, {
+      await axios.delete(`/api/song-annotations/${confirmDeleteId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      alert("삭제 완료");
+      setConfirmDeleteId(null);
       handleLineClick(selectedText);
     } catch (err) {
       console.error("주석 삭제 실패:", err);
-      alert("삭제 중 오류 발생");
+      setDeleteErrorModalOpen(true);
     }
   };
+
 
   const handleToggleLike = async (annotationId) => {
     try {
@@ -190,7 +202,7 @@ useEffect(() => {
       handleLineClick(selectedText);
     } catch (err) {
       console.error("좋아요 실패:", err);
-      alert("로그인이 필요하거나 오류가 발생했습니다.");
+      setLikeErrorModalOpen(true);
     }
   };
 
@@ -199,11 +211,12 @@ useEffect(() => {
     <p
       key={idx}
       onClick={() => handleLineClick(line)}
-      className={`lyrics-line cursor-pointer hover:bg-yellow-100 px-2 py-1 rounded ${
-        selectedText === line ? "bg-yellow-200" : ""
+      className={`lyrics-line group flex items-center gap-3 cursor-pointer px-2 py-1 rounded ${
+        selectedText === line ? "bg-yellow-200" : "hover:bg-gray-100"
       }`}
     >
-      {line}
+      <span className="text-xs text-gray-400 font-mono w-6">{String(idx + 1).padStart(2, "0")}</span>
+      <span>{line}</span>
     </p>
   ));
 
@@ -304,7 +317,7 @@ const handleMentionSelect = (artist) => {
                   onChange={handleCreditsChange} // ✅ 자동완성 트리거 함수
                 />
                 {showMentionDropdown && mentionResults.length > 0 && (
-                  <div className="absolute bg-white border w-full rounded shadow max-h-60 overflow-y-auto z-10">
+                  <div className="absolute bg-white border w-full rounded-lg shadow-lg max-h-60 overflow-y-auto z-10 mt-1">
                     {mentionResults.map((artist) => (
                       <div
                         key={artist.id}
@@ -345,7 +358,14 @@ const handleMentionSelect = (artist) => {
           {selectedText ? (
             <div className="annotation-panel p-4 bg-white">
               <div className="flex space-x-4 border-b pb-2 mb-3 text-sm">
-                <div onClick={() => setActiveTab("translation")} className={`cursor-pointer px-2 pb-1 ${activeTab === "translation" ? "border-b-2 border-blue-500 font-semibold" : "text-gray-500"}`}>
+                <div
+                  onClick={() => setActiveTab("translation")}
+                  className={`cursor-pointer px-4 py-1 rounded-t-md transition ${
+                    activeTab === "translation"
+                      ? "bg-blue-100 text-blue-700 font-semibold"
+                      : "text-gray-500 hover:text-blue-600"
+                  }`}
+                >
                   번역
                 </div>
                 <div onClick={() => setActiveTab("interpretation")} className={`cursor-pointer px-2 pb-1 ${activeTab === "interpretation" ? "border-b-2 border-blue-500 font-semibold" : "text-gray-500"}`}>
@@ -379,7 +399,7 @@ const handleMentionSelect = (artist) => {
                     annotations.filter((a) => a.type === activeTab).map((a) => {
                       const isAuthor = user?.email === a.user_email;
                       return (
-                        <div key={a.id} className="mb-2 p-2 border rounded">
+                        <div key={a.id} className="mb-3 p-3 border rounded-lg bg-gray-50">
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
                               {a.profile_image_url && (
@@ -403,16 +423,49 @@ const handleMentionSelect = (artist) => {
                               </button>
                               {isAuthor && (
                                 <>
-                                  <button onClick={() => {
-                                    const newContent = prompt("새 내용:", a.content);
-                                    if (newContent && newContent !== a.content) handleEditAnnotation(a.id, newContent);
-                                  }} className="text-xs text-blue-600 hover:underline">수정</button>
+                                  <button
+                                    onClick={() => {
+                                      setEditingId(a.id);
+                                      setEditingText(a.content);
+                                    }}
+                                    className="text-xs text-blue-600 hover:underline"
+                                  >
+                                    수정
+                                  </button>
                                   <button onClick={() => handleDeleteAnnotation(a.id)} className="text-xs text-red-600 hover:underline">삭제</button>
                                 </>
                               )}
                             </div>
                           </div>
-                          <p>{a.content}</p>
+                          {editingId === a.id ? (
+                            <div className="mt-2 space-y-2">
+                              <textarea
+                                className="w-full border p-2 rounded text-sm"
+                                rows={4}
+                                value={editingText}
+                                onChange={(e) => setEditingText(e.target.value)}
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => {
+                                    handleEditAnnotation(a.id, editingText);
+                                    setEditingId(null);
+                                  }}
+                                  className="text-sm text-white bg-blue-600 px-3 py-1 rounded"
+                                >
+                                  저장
+                                </button>
+                                <button
+                                  onClick={() => setEditingId(null)}
+                                  className="text-sm text-gray-500 hover:underline"
+                                >
+                                  취소
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-800 whitespace-pre-line">{a.content}</p>
+                          )}
                         </div>
                       );
                     })
@@ -432,6 +485,40 @@ const handleMentionSelect = (artist) => {
           )}
         </div>
       </div>
+          <AlertModal
+            isOpen={saveErrorModalOpen}
+            title="저장 실패"
+            description="곡 정보를 저장하는 중 오류가 발생했습니다."
+            onClose={() => setSaveErrorModalOpen(false)}
+          />
+          <AlertModal
+            isOpen={editErrorModalOpen}
+            title="수정 실패"
+            description="주석 수정 중 오류가 발생했습니다."
+            onClose={() => setEditErrorModalOpen(false)}
+          />
+
+          <AlertModal
+            isOpen={deleteErrorModalOpen}
+            title="삭제 실패"
+            description="주석 삭제 중 오류가 발생했습니다."
+            onClose={() => setDeleteErrorModalOpen(false)}
+          />
+
+          <AlertModal
+            isOpen={likeErrorModalOpen}
+            title="좋아요 실패"
+            description="로그인이 필요하거나 오류가 발생했습니다."
+            onClose={() => setLikeErrorModalOpen(false)}
+          />
+
+          <ConfirmModal
+            isOpen={confirmDeleteId !== null}
+            title="주석 삭제"
+            description="정말 이 주석을 삭제하시겠습니까?"
+            onConfirm={confirmDelete}
+            onCancel={() => setConfirmDeleteId(null)}
+          />
     </div>
   );
 }

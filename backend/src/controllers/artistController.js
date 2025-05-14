@@ -46,8 +46,6 @@ exports.createArtist = (req, res) => {
 // artist 조회
 exports.getArtistDetail = (req, res) => {
   const { slug } = req.params;  
-  console.log("✅ 요청 slug:", slug); // STEP 1: slug 확인
-
   // 1. 아티스트 정보 조회
   const artistQuery = `
     SELECT id, name, type, formed_date, members, genre, bio, image_url, slug
@@ -66,8 +64,6 @@ exports.getArtistDetail = (req, res) => {
     }
 
     const artist = artistResults[0];
-    console.log("🎤 아티스트 결과:", artist); // STEP 4
-
     // 2. 앨범 조회
     const albumQuery = `
       (
@@ -90,9 +86,6 @@ exports.getArtistDetail = (req, res) => {
         console.error("❌ 앨범 조회 중 DB 오류:", err2); // STEP 5
         return res.status(500).json({ message: "DB 오류 (앨범)" });
       }
-
-      console.log("💿 앨범 결과:", albumResults); // STEP 6
-
       // 3. 크레딧 참여한 곡도 추가로 조회
         const creditQuery = `
           SELECT 
@@ -116,8 +109,6 @@ exports.getArtistDetail = (req, res) => {
           console.error("❌ 크레딧 조회 중 DB 오류:", err3); // STEP 7
           return res.status(500).json({ message: "DB 오류 (크레딧)" });
         }
-
-        console.log("🎶 크레딧 결과:", creditResults); // STEP 8
 
         res.json({
           artist,

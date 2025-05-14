@@ -1,46 +1,34 @@
-// src/utils/cropImage.js
-export const getCroppedImg = (imageSrc, croppedAreaPixels, rotation = 0) => {
+export const getCroppedImg = (imageSrc, pixelCrop) => {
   return new Promise((resolve, reject) => {
     const image = new Image();
+    image.crossOrigin = "anonymous";
     image.src = imageSrc;
-    image.crossOrigin = "anonymous"; // to handle CORS issues if needed
 
     image.onload = () => {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
 
-      const maxSize = Math.max(image.width, image.height);
-      const safeArea = 2 * ((maxSize / 2) * Math.sqrt(2));
+      canvas.width = pixelCrop.width;
+      canvas.height = pixelCrop.height;
 
-      canvas.width = safeArea;
-      canvas.height = safeArea;
-
-      ctx.translate(safeArea / 2, safeArea / 2);
-      ctx.rotate((rotation * Math.PI) / 180);
-      ctx.translate(-safeArea / 2, -safeArea / 2);
       ctx.drawImage(
         image,
-        (safeArea - image.width) / 2,
-        (safeArea - image.height) / 2
-      );
-
-      const data = ctx.getImageData(0, 0, safeArea, safeArea);
-
-      canvas.width = croppedAreaPixels.width;
-      canvas.height = croppedAreaPixels.height;
-
-      ctx.putImageData(
-        data,
-        Math.round(-croppedAreaPixels.x),
-        Math.round(-croppedAreaPixels.y)
+        pixelCrop.x,
+        pixelCrop.y,
+        pixelCrop.width,
+        pixelCrop.height,
+        0,
+        0,
+        pixelCrop.width,
+        pixelCrop.height
       );
 
       canvas.toBlob((blob) => {
-        if (!blob) return reject("Blob 생성 실패");
+        if (!blob) return reject(new Error("Blob 생성 실패"));
         resolve(blob);
       }, "image/jpeg");
     };
 
-    image.onerror = () => reject("이미지를 불러올 수 없습니다.");
+    image.onerror = () => reject(new Error("이미지 로딩 실패"));
   });
 };

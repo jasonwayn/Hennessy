@@ -6,6 +6,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useLoginModal } from "../contexts/LoginModalContext";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { v4 as uuidv4 } from "uuid";
+import ImageCropUploader from "../components/ImageCropUploader";
 
 function NewsEditPage() {
   const { id } = useParams();
@@ -18,7 +19,6 @@ function NewsEditPage() {
   const [summary, setSummary] = useState("");
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState("");
-  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -75,13 +75,11 @@ function NewsEditPage() {
         await axios.put(`/api/news/${id}`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        alert("뉴스 수정 완료");
         navigate(`/news/${id}`);
       } else {
         const res = await axios.post(`/api/news`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        alert("뉴스 등록 완료");
         navigate(`/news/${res.data.news_id}`);
       }
     } catch (err) {
@@ -90,27 +88,9 @@ function NewsEditPage() {
     }
   };
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setUploading(true);
-    try {
-      const storage = getStorage();
-      const fileRef = ref(storage, `news/${uuidv4()}-${file.name}`);
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
-      setImageUrl(url);
-    } catch (err) {
-      console.error("이미지 업로드 실패:", err);
-      alert("이미지 업로드 실패");
-    } finally {
-      setUploading(false);
-    }
-  };
-
   return (
     <div className="max-w-3xl mx-auto p-6">
-      <h2 className="text-2xl font-bold mb-4">{isEdit ? "뉴스 수정" : "뉴스 등록"}</h2>
+      <h2 className="text-2xl font-bold mb-4">{isEdit ? "" : "뉴스 등록"}</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block mb-1 font-semibold">제목</label>
@@ -134,13 +114,12 @@ function NewsEditPage() {
 
         <div>
           <label className="block mb-1 font-semibold">이미지 업로드</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="block"
+          <ImageCropUploader
+            storagePath="news"
+            aspect={16 / 9}
+            cropShape="rect"
+            onComplete={(url) => setImageUrl(url)}
           />
-          {uploading && <p className="text-sm text-gray-500">업로드 중...</p>}
           {imageUrl && (
             <img
               src={imageUrl}
@@ -149,6 +128,7 @@ function NewsEditPage() {
             />
           )}
         </div>
+
 
         <div>
           <label className="block mb-1 font-semibold">내용</label>

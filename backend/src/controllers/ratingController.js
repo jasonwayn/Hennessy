@@ -57,7 +57,6 @@ exports.setRating = (req, res) => {
 // 평균 평점 조회
 exports.getAverageRating = (req, res) => {
   const { slug } = req.params;
-  console.log("평균 평점 요청 slug:", slug);
   db.query("SELECT id FROM albums WHERE slug = ?", [slug], (err, albumResults) => {
     if (err || albumResults.length === 0) return res.status(404).json({ message: "앨범 없음" });
 

@@ -48,8 +48,8 @@ function NewsPage() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6">뉴스</h2>
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+      <h2 className="text-2xl sm:text-3xl font-bold mb-6">뉴스</h2>
 
       {/* ✅ 인기 뉴스 레이아웃 */}
       {topNews.length === 3 && (
@@ -57,16 +57,20 @@ function NewsPage() {
           {/* 왼쪽 큰 뉴스 */}
           <Link
             to={`/news/${topNews[0].id}`}
-            className="lg:col-span-2 block border rounded overflow-hidden shadow hover:shadow-lg transition"
+            className="lg:col-span-2 block border rounded overflow-hidden shadow hover:shadow-lg transition duration-300"
           >
             <img
               src={topNews[0].image_url}
               alt={topNews[0].title}
-              className="w-full h-80 object-cover"
+              className="w-full aspect-[16/9] object-cover"
             />
             <div className="p-4">
-              <h3 className="text-2xl font-bold mb-2">{topNews[0].title}</h3>
-              <p className="text-sm text-gray-500">{new Date(topNews[0].created_at).toLocaleDateString()}</p>
+              <h3 className="text-xl sm:text-2xl font-bold mb-1 line-clamp-2">
+                {topNews[0].title}
+              </h3>
+              <p className="text-sm text-gray-500">
+                {new Date(topNews[0].created_at).toLocaleDateString()}
+              </p>
             </div>
           </Link>
 
@@ -76,15 +80,17 @@ function NewsPage() {
               <Link
                 key={news.id}
                 to={`/news/${news.id}`}
-                className="block border rounded overflow-hidden shadow hover:shadow-md transition"
+                className="block border rounded overflow-hidden shadow hover:shadow-md transition duration-300"
               >
                 <img
                   src={news.image_url}
                   alt={news.title}
-                  className="w-full h-36 object-cover"
+                  className="w-full aspect-video object-cover"
                 />
                 <div className="p-3">
-                  <h3 className="text-lg font-semibold">{news.title}</h3>
+                  <h3 className="text-base sm:text-lg font-semibold line-clamp-2">
+                    {news.title}
+                  </h3>
                   <p className="text-xs text-gray-500">
                     {new Date(news.created_at).toLocaleDateString()}
                   </p>
@@ -95,24 +101,25 @@ function NewsPage() {
         </div>
       )}
 
-      {/* ✅ 구분선 */}
       <div className="border-t border-gray-300 my-8" />
 
       {/* ✅ 최신 뉴스 리스트 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {newsList.map(news => (
           <Link
             key={news.id}
             to={`/news/${news.id}`}
-            className="block border rounded overflow-hidden shadow hover:shadow-md transition"
+            className="block border rounded overflow-hidden shadow hover:shadow-md transition duration-300"
           >
             <img
               src={news.image_url}
               alt={news.title}
-              className="w-full h-48 object-cover"
+              className="w-full aspect-video object-cover"
             />
             <div className="p-3">
-              <h3 className="text-lg font-semibold">{news.title}</h3>
+              <h3 className="text-base sm:text-lg font-semibold line-clamp-2">
+                {news.title}
+              </h3>
               <p className="text-xs text-gray-500">
                 {new Date(news.created_at).toLocaleDateString()}
               </p>
@@ -124,7 +131,7 @@ function NewsPage() {
       {hasMore && (
         <button
           onClick={fetchMoreNews}
-          className="block mx-auto px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded"
+          className="block mx-auto px-6 py-2 bg-gray-100 hover:bg-gray-200 rounded shadow"
         >
           더보기
         </button>

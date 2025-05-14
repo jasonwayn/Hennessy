@@ -40,7 +40,7 @@ exports.getNewsById = (req, res) => {
 
   const selectQuery = `
     SELECT n.id, n.title, n.summary, n.content, n.image_url, n.created_at,
-           u.nickname, u.profile_image_url, u.email AS user_email
+           u.id AS user_id, u.nickname, u.profile_image_url, u.email AS user_email
     FROM news n
     JOIN users u ON n.user_id = u.id
     WHERE n.id = ?

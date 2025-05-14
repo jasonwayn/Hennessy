@@ -2,9 +2,6 @@ const db = require("../config/db");
 
 // ✅ 로그인한 유저의 닉네임 + bio + 프로필 이미지 반환
 exports.getMyInfo = (req, res) => {
-  console.log("🔥 getMyInfo 진입");
-  console.log("🔥 req.user:", req.user);
-
   const userEmail = req.user?.email;
   if (!userEmail) {
     return res.status(400).json({ message: "이메일이 없습니다" });

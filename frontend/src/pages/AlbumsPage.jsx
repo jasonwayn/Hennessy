@@ -17,7 +17,11 @@ function AlbumsPage() {
         const res = await axios.get("/api/albums", {
           params: { year: year || undefined, sort },
         });
-        setAlbums(res.data);
+        // single 타입 필터링
+        const filtered = res.data.filter(
+          (album) => String(album.type).toLowerCase() !== "single"
+        );
+        setAlbums(filtered);  // ← 여기를 filtered로 변경!
       } catch (err) {
         console.error("앨범 불러오기 실패:", err);
       }

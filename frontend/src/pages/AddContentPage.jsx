@@ -1,12 +1,12 @@
 // src/pages/AddContentPage.jsx
 import { useState, useEffect } from "react";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "../firebase";
 import axios from "axios";
 import { getToken } from "../utils/getToken";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useLoginModal } from "../contexts/LoginModalContext";
+import ImageCropUploader from "../components/ImageCropUploader";
+import AlertModal from "../components/AlertModal";
 
 function AddContentPage() {
   const navigate = useNavigate();
@@ -16,7 +16,6 @@ function AddContentPage() {
 
   // Artist State
   const [name, setName] = useState("");
-  const [photoFile, setPhotoFile] = useState(null);
   const [photoUrl, setPhotoUrl] = useState("");
   const [about, setAbout] = useState("");
   const [type, setType] = useState("solo");
@@ -31,7 +30,6 @@ function AddContentPage() {
   const [albumGenre, setAlbumGenre] = useState("");
   const [albumDesc, setAlbumDesc] = useState("");
   const [albumDate, setAlbumDate] = useState("");
-  const [albumImageFile, setAlbumImageFile] = useState(null);
   const [albumImageUrl, setAlbumImageUrl] = useState("");
   const [selectedArtists, setSelectedArtists] = useState([]);
   const [tracks, setTracks] = useState([{ title: "", track_number: 1, lyrics: "" }]);
@@ -43,9 +41,12 @@ function AddContentPage() {
   // News state
   const [newsTitle, setNewsTitle] = useState("");
   const [newsSummary, setNewsSummary] = useState("");
-  const [newsImageFile, setNewsImageFile] = useState(null);
   const [newsImageUrl, setNewsImageUrl] = useState("");
   const [newsContent, setNewsContent] = useState("");
+
+  //alertmodal
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
 
   useEffect(() => {
   if (!loading && !user) {
@@ -72,19 +73,19 @@ function AddContentPage() {
     return () => clearTimeout(delayDebounce);
   }, [artistQuery]);
 
-  const handleUploadPhoto = async (file, path, setUrl) => {
-    if (!file) return;
-    const fileRef = ref(storage, `${path}/${file.name}`);
-    await uploadBytes(fileRef, file);
-    const url = await getDownloadURL(fileRef);
-    setUrl(url);
-    alert("사진 업로드 완료!");
-  };
-
   const handleSubmitArtist = async () => {
     const token = await getToken();
-    if (!token) return alert("로그인이 필요합니다.");
-    if (!name || !photoUrl) return alert("이름과 사진은 필수입니다.");
+    if (!token) {
+      setAlertMessage("로그인이 필요합니다.");
+      setAlertOpen(true);
+      return;
+    }
+
+    if (!name || !photoUrl) {
+      setAlertMessage("이름과 사진은 필수입니다.");
+      setAlertOpen(true);
+      return;
+    }
     try {
       const response = await axios.post(
         "/api/artists",
@@ -95,65 +96,94 @@ function AddContentPage() {
           bio: description,
           type,
           genre,
-          formed_date: formedDate
+          formed_date: type === "group" ? formedDate : null,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      const slug = response.data.slug;
-      alert("아티스트 등록 완료");
-      navigate(`/artist/${slug}`);
+      navigate(`/artist/${response.data.slug}`);
     } catch (err) {
-      console.error("아티스트 등록 실패:", err);
-      alert("등록 실패");
+      setAlertMessage("아티스트 등록 실패");
+      setAlertOpen(true);
     }
   };
 
-  const handleSubmitAlbum = async () => {
-    const token = await getToken();
-    if (!token) return alert("로그인이 필요합니다.");
-    const artistIds = albumType === "collaboration" ? selectedArtists.map((a) => a.id) : [albumArtistId];
-    if (!albumTitle || !albumImageUrl || artistIds.length === 0) return alert("필수 항목 누락");
-    try {
-      const res = await axios.post(
-        "/api/albums",
-        {
-          title: albumTitle,
-          artist_id: artistIds[0],
-          artist_ids: artistIds,
-          genre: albumGenre,
-          description: albumDesc,
-          release_date: albumDate,
-          image_url: albumImageUrl,
-          type: albumType,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const albumId = res.data.album_id;
+const handleSubmitAlbum = async () => {
+  const token = await getToken();
+  if (!token) {
+    setAlertMessage("로그인이 필요합니다.");
+    setAlertOpen(true);
+    return;
+  }
 
-      for (const track of tracks) {
-        if (track.title.trim()) {
-          await axios.post("/api/songs", {
-            title: track.title,
-            track_number: track.track_number,
-            lyrics: track.lyrics,
-            album_id: albumId,
-          });
-        }
+  const artistIds = albumType === "collaboration"
+    ? selectedArtists.map((a) => a.id)
+    : [albumArtistId];
+
+  if (artistIds.length === 0 || !artistIds[0]) {
+    setAlertMessage("존재하지 않는 아티스트입니다. 자동완성에서 아티스트를 선택해주세요.");
+    setAlertOpen(true);
+    return;
+  }
+
+  if (!albumTitle || !albumImageUrl || artistIds.length === 0) {
+    setAlertMessage("모든 필드를 입력해주세요.");
+    setAlertOpen(true);
+    return;
+  }
+
+  try {
+    const res = await axios.post(
+      "/api/albums",
+      {
+        title: albumTitle,
+        artist_id: artistIds[0],
+        artist_ids: artistIds,
+        genre: albumGenre,
+        description: albumDesc,
+        release_date: albumDate,
+        image_url: albumImageUrl,
+        type: albumType,
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    const albumId = res.data.album_id;
+
+    for (const track of tracks) {
+      if (track.title.trim()) {
+        await axios.post("/api/songs", {
+          title: track.title,
+          track_number: track.track_number,
+          lyrics: track.lyrics,
+          album_id: albumId,
+        });
       }
-      const slug =res.data.slug;
-      const artistSlug = res.data.artist_slug;
-      alert("앨범 및 수록곡 등록 완료");
-      navigate(`/album/${artistSlug}/${slug}`);
-    } catch (err) {
-      console.error("앨범 등록 실패:", err);
-      alert("등록 실패");
     }
-  };
+
+    const slug = res.data.slug;
+    const artistSlug = res.data.artist_slug;
+    setTimeout(() => navigate(`/album/${artistSlug}/${slug}`), 1000); 
+  } catch (err) {
+    console.error("앨범 등록 실패:", err);
+    setAlertMessage("앨범 등록 중 오류가 발생했습니다.");
+    setAlertOpen(true);
+  }
+};
+
 
   const handleSubmitNews = async () => {
     const token = await getToken();
-    if (!token) return alert("로그인이 필요합니다.");
-    if (!newsTitle || !newsSummary || !newsContent) return alert("모든 필드를 입력해주세요.");
+      if (!token) {
+        setAlertMessage("로그인이 필요합니다.");
+        setAlertOpen(true);
+        return;
+      }
+
+      if (!newsTitle || !newsSummary || !newsContent) {
+        setAlertMessage("모든 필드를 입력해주세요.");
+        setAlertOpen(true);
+        return;
+      }
     try {
       const response = await axios.post(
         "/api/news",
@@ -166,15 +196,14 @@ function AddContentPage() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const newsId = response.data.news_id;
-      alert("뉴스 등록 완료");
       navigate(`/news/${newsId}`);
     } catch (err) {
-      console.error("뉴스 등록 실패:", err);
-      alert("뉴스 등록 실패");
+      setAlertMessage("뉴스 등록 실패");
+      setAlertOpen(true);
     }
   };
 
-
+  
   return (
     <div className="p-8 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-6 text-center">Add a Content</h1>
@@ -184,37 +213,47 @@ function AddContentPage() {
           onClick={() => setActiveTab("artist")}
           className={`flex-1 p-2 ${activeTab === "artist" ? "bg-gray-300" : "bg-white"}`}
         >
-          Add Artist
+          아티스트 등록
         </button>
         <button
           onClick={() => setActiveTab("album")}
           className={`flex-1 p-2 ${activeTab === "album" ? "bg-gray-300" : "bg-white"}`}
         >
-          Add Album / Single 
+          앨범 / 싱글 등록
         </button>
         <button
           onClick={() => setActiveTab("news")}
           className={`flex-1 p-2 ${activeTab === "news" ? "bg-gray-300" : "bg-white"}`}
         >
-          Add News
+          뉴스 작성
         </button>
       </div>
 
       {activeTab === "artist" && (
         <div className="space-y-4">
           <label className="block">
-            Name
+            이름
             <input type="text" className="w-full border p-2 rounded mt-1" value={name} onChange={(e) => setName(e.target.value)} />
           </label>
-          <div>
-            <label>Photo Upload</label>
-            <div className="flex gap-4 items-center mt-1">
-              <input type="file" onChange={(e) => setPhotoFile(e.target.files[0])} />
-              <button onClick={() => handleUploadPhoto(photoFile, "artists", setPhotoUrl)} className="bg-blue-500 text-white px-3 py-1 rounded">Upload</button>
+            <div>
+              <label className="block text-sm font-medium mb-1">이미지 업로드</label>
+              <ImageCropUploader
+                storagePath="artists"
+                aspect={1}
+                cropShape="rect"
+                onComplete={(url) => setPhotoUrl(url)}
+              />
             </div>
-          </div>
+
+            {photoUrl && (
+              <img
+                src={photoUrl}
+                alt="아티스트 프로필 미리보기"
+                className="w-32 h-32 object-cover rounded mt-2"
+              />
+            )}
           <label className="block">
-            {type === "solo" ? "Also Known As" : "Members"}
+            {type === "solo" ? "Also Known As" : "구성원"}
             <input
               type="text"
               className="w-full border p-2 rounded mt-1"
@@ -231,13 +270,13 @@ function AddContentPage() {
               </select>
             </label>
             <label className="flex-1">
-              Genre
+              장르
               <input type="text" className="w-full border p-2 rounded mt-1" value={genre} onChange={(e) => setGenre(e.target.value)} />
             </label>
           </div>
           {type === "group" && (
             <label className="block">
-              Formed Date
+              결성일
               <input
                 type="date"
                 className="w-full border p-2 rounded mt-1"
@@ -248,11 +287,11 @@ function AddContentPage() {
           )}
 
           <label className="block">
-            Bio (description)
+            소개
             <textarea className="w-full border p-2 rounded mt-1" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
           </label>
           <button onClick={handleSubmitArtist} className="w-full bg-black text-white p-2 rounded mt-4">
-            Submit
+            아티스트 저장
           </button>
         </div>
       )}
@@ -260,7 +299,7 @@ function AddContentPage() {
       {activeTab === "news" && (
   <div className="space-y-4">
     <label className="block">
-      Title
+      제목
       <input
         type="text"
         className="w-full border p-2 rounded mt-1"
@@ -269,7 +308,7 @@ function AddContentPage() {
       />
     </label>
     <label className="block">
-      Summary
+      요약
       <input
         type="text"
         className="w-full border p-2 rounded mt-1"
@@ -279,7 +318,7 @@ function AddContentPage() {
       />
     </label>
     <label className="block">
-      Content
+      내용
       <textarea
         className="w-full border p-2 rounded mt-1"
         rows={6}
@@ -288,24 +327,29 @@ function AddContentPage() {
       />
     </label>
 
-    <div>
-      <label>Cover Image</label>
-      <div className="flex gap-4 items-center mt-1">
-        <input type="file" onChange={(e) => setNewsImageFile(e.target.files[0])} />
-        <button
-          onClick={() => handleUploadPhoto(newsImageFile, "news", setNewsImageUrl)}
-          className="bg-blue-500 text-white px-3 py-1 rounded"
-        >
-          Upload
-        </button>
-      </div>
-    </div>
+<div>
+  <label className="block text-sm font-medium mb-1">이미지 업로드</label>
+  <ImageCropUploader
+    storagePath="news"
+    aspect={16 / 9}
+    cropShape="rect"
+    onComplete={(url) => setNewsImageUrl(url)}
+  />
+</div>
+
+{newsImageUrl && (
+  <img
+    src={newsImageUrl}
+    alt="뉴스 이미지 미리보기"
+    className="w-full h-48 object-cover rounded mb-4"
+  />
+)}
 
     <button
       onClick={handleSubmitNews}
       className="w-full bg-black text-white p-2 rounded mt-4"
     >
-      Submit News
+      뉴스 저장
     </button>
   </div>
 )}
@@ -314,13 +358,13 @@ function AddContentPage() {
       {activeTab === "album" && (
         <div className="space-y-4">
           <label className="block">
-            Title
+            앨범명
             <input type="text" className="w-full border p-2 rounded mt-1" value={albumTitle} onChange={(e) => setAlbumTitle(e.target.value)} />
           </label>
 
           {albumType !== "collaboration" ? (
             <label className="block relative">
-              Artist
+              아티스트
               <input
                 type="text"
                 className="w-full border p-2 rounded mt-1"
@@ -404,30 +448,41 @@ function AddContentPage() {
           </label>
 
           <label className="block">
-            Genre
+            장르
             <input type="text" className="w-full border p-2 rounded mt-1" value={albumGenre} onChange={(e) => setAlbumGenre(e.target.value)} />
           </label>
 
           <label className="block">
-            Description
+            앨범 소개
             <textarea className="w-full border p-2 rounded mt-1" rows={3} value={albumDesc} onChange={(e) => setAlbumDesc(e.target.value)} />
           </label>
 
           <label className="block">
-            Release Date
+            발매일
             <input type="date" className="w-full border p-2 rounded mt-1" value={albumDate} onChange={(e) => setAlbumDate(e.target.value)} />
           </label>
 
           <div>
-            <label>Album Cover Upload</label>
-            <div className="flex gap-4 items-center mt-1">
-              <input type="file" onChange={(e) => setAlbumImageFile(e.target.files[0])} />
-              <button onClick={() => handleUploadPhoto(albumImageFile, "albums", setAlbumImageUrl)} className="bg-blue-500 text-white px-3 py-1 rounded">Upload</button>
-            </div>
+            <label className="block text-sm font-medium mb-1">앨범 커버</label>
+            <ImageCropUploader
+              storagePath="albums"
+              aspect={1}
+              cropShape="rect"
+              onComplete={(url) => setAlbumImageUrl(url)}
+            />
           </div>
 
+          {albumImageUrl && (
+            <img
+              src={albumImageUrl}
+              alt="앨범 커버 미리보기"
+              className="aspect-square w-full object-cover rounded mb-4"
+            />
+          )}
+
+
           <div>
-            <label className="block text-lg font-semibold mt-6">Tracks</label>
+            <label className="block text-lg font-semibold mt-6">수록곡</label>
             {tracks.map((track, index) => (
               <div key={index} className="border p-3 rounded mb-3 relative">
                 <button
@@ -454,7 +509,7 @@ function AddContentPage() {
                   />
                 </label>
                 <label className="block mb-1">
-                  Track #
+                  Track {index + 1}
                   <input
                     type="number"
                     className="w-full border p-1 rounded"
@@ -467,7 +522,7 @@ function AddContentPage() {
                   />
                 </label>
                 <label className="block mb-1">
-                  Lyrics
+                  가사
                   <textarea
                     className="w-full border p-1 rounded"
                     rows={2}
@@ -488,17 +543,24 @@ function AddContentPage() {
                 setTracks([...tracks, { title: "", track_number: tracks.length + 1, lyrics: "" }])
               }
             >
-              + Add Track
+              + 곡 추가
             </button>
           </div>
 
           <button onClick={handleSubmitAlbum} className="w-full bg-black text-white p-2 rounded mt-4">
-            Submit
+            저장
           </button>
         </div>
       )}
+    <AlertModal
+      isOpen={alertOpen}
+      title="알림"
+      description={alertMessage}
+      onClose={() => setAlertOpen(false)}
+    />     
     </div>
   );
 }
+
 
 export default AddContentPage;

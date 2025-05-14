@@ -231,9 +231,6 @@ exports.updateAnnotation = (req, res) => {
 exports.deleteAnnotation = (req, res) => {
   const annotationId = req.params.id;
   const userEmail = req.user.email;
-
-  console.log("🗑️ deleteAnnotation 진입:", annotationId, userEmail); // 추가
-
   db.query(
     "SELECT u.id AS user_id, a.user_id AS author_id FROM users u JOIN song_annotations a ON a.id = ? WHERE u.email = ?",
     [annotationId, userEmail],

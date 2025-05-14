@@ -5,6 +5,7 @@ import { getToken } from "../utils/getToken";
 import { useLoginModal } from "../contexts/LoginModalContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useLocation } from "react-router-dom";
+import AlertModal from "../components/AlertModal";
 
 function AlbumPage() {
   const { artistSlug, albumSlug } = useParams();
@@ -20,6 +21,8 @@ function AlbumPage() {
   const { openLoginModal } = useLoginModal();
   const { user } = useAuth();
   const location = useLocation();
+  const [ratingCount, setRatingCount] = useState(null);
+  const [alertOpen, setAlertOpen] = useState(false);
 
   // ✅ 앨범 정보 및 내 평점 로딩
   useEffect(() => {
@@ -38,10 +41,17 @@ function AlbumPage() {
         setLoading(false);
       });
 
-    axios
-      .get(`/api/album/${albumSlug}/average-rating`)
-      .then((res) => setAverageRating(res.data.average))
-      .catch((err) => console.error("평균 평점 로딩 실패:", err));
+  axios
+    .get(`/api/album/${albumSlug}/average-rating`)
+    .then((res) => {
+      setAverageRating(
+        res.data.average != null ? Number(res.data.average) : null
+      );
+      setRatingCount(
+        res.data.count != null ? Number(res.data.count) : 0
+      );
+    })
+    .catch((err) => console.error("평균 평점 로딩 실패:", err));
 
     const fetchUserRating = async () => {
       const token = await getToken();
@@ -122,19 +132,29 @@ const fetchReviews = async () => {
 
   const handleRatingChange = async (e) => {
     const newRating = parseFloat(e.target.value);
-    setUserRating(newRating);
+    setUserRating(newRating); // 낙관적 UI 반영
 
     const token = await getToken();
     if (!token) return openLoginModal();
 
     try {
+      // 평점 저장
       await axios.post(
         `/api/album/${albumSlug}/rating`,
         { rating: newRating },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      const res = await axios.get(`/api/album/${albumSlug}/average-rating`);
-      setAverageRating(res.data.average);
+
+      // 평균 평점 + 참여자 수 다시 가져오기
+      const avgRes = await axios.get(`/api/album/${albumSlug}/average-rating`);
+      setAverageRating(avgRes.data.average);
+      setRatingCount(avgRes.data.count);
+
+      // 내 평점도 다시 불러오기
+      const myRes = await axios.get(`/api/album/${albumSlug}/my-rating`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUserRating(myRes.data.rating);
     } catch (err) {
       console.error("평점 등록 실패:", err);
     }
@@ -142,7 +162,10 @@ const fetchReviews = async () => {
 
   const handleReviewSubmit = async () => {
     const trimmed = newReview.trim();
-    if (!trimmed) return alert("리뷰를 입력해주세요.");
+    if (!trimmed) {
+      setAlertOpen(true);
+      return;
+    }
 
     const token = await getToken();
     if (!token) return openLoginModal();
@@ -249,35 +272,95 @@ const fetchReviews = async () => {
 
       {/* 평점 */}
       <div className="mt-6">
-        <h2 className="text-lg font-semibold">앨범 평점</h2>
-        <p className="mb-2">평균 평점: {typeof averageRating === "number" ? averageRating.toFixed(1) : "불러오는 중..."}</p>
-        <label className="mr-2">내 평점:</label>
-        <select
-          value={userRating ?? ""}
-          onChange={handleRatingChange}
-          className="border rounded px-2 py-1"
-          disabled={!user} // ✅ 비로그인 시 비활성화
-        >
-          <option value="" disabled>선택하세요</option>
-          {Array.from({ length: 21 }, (_, i) => (i * 0.5).toFixed(1)).map((score) => (
-            <option key={score} value={score}>{score}</option>
-          ))}
-        </select>
+        <h2 className="text-lg font-semibold mb-4">앨범 평점</h2>
+
+        <div className="flex items-center gap-6 mb-3">
+          {/* 평균 평점 표시 */}
+          <div className="text-center">
+            <div className="w-16 h-16 rounded-full border-4 border-black flex items-center justify-center text-xl font-bold">
+              {averageRating != null && !isNaN(averageRating)
+                ? Number(averageRating).toFixed(1)
+                : "-"}
+            </div>
+            <p className="text-xs text-gray-600 mt-1">
+              {/*평균 평점 {ratingCount !== null ? `(${ratingCount}명)` : "(0명)"}*/}
+            </p>
+          </div>
+              
+          {/* 내 평점 select */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">내 평점</label>
+            <select
+              value={userRating ?? ""}
+              onChange={handleRatingChange}
+              className="border rounded px-2 py-1"
+              disabled={!user}
+            >
+              <option value="" disabled>
+                선택하세요
+              </option>
+              {Array.from({ length: 21 }, (_, i) => (i * 0.5).toFixed(1)).map((score) => (
+                <option key={score} value={score}>
+                  {score}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
+
       {/* 수록곡 */}
-      <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-2">수록곡</h2>
-        <ul className="space-y-1">
-          {songs.map((song) => (
-            <li key={song.id}>
-              <a href={`/songs/${song.id}`} className="text-blue-600 hover:underline">
-                {song.track_number}. {song.title}
-              </a>
-            </li>
-          ))}
-        </ul>
+<div className="mt-8">
+  <h2 className="text-xl font-semibold mb-4">트랙리스트</h2>
+  <div className="divide-y">
+    {songs.map((song, idx) => (
+      <div
+        key={song.id}
+        className="flex items-center justify-between px-2 py-3 hover:bg-gray-50 transition"
+      >
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-600 font-mono w-6 text-right">{String(song.track_number).padStart(2, "0")}</span>
+          <a
+            href={`/songs/${song.id}`}
+            className="font-medium hover:underline text-sm"
+          >
+            {song.title}
+          </a>
+        </div>
+        {song.view_count != null && (
+          <div className="flex items-center text-xs text-gray-600 gap-1">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-4 h-4"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12s-3.75 6.75-9.75 6.75S2.25 12 2.25 12z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+            </svg>
+            <span>
+              {song.view_count >= 1000
+                ? (song.view_count / 1000).toFixed(1).replace(/\.0$/, '') + 'K'
+                : song.view_count}
+            </span>
+          </div>
+        )}
       </div>
+    ))}
+  </div>
+</div>
+
 
       {/* 리뷰 */}
       <div className="mt-10">
@@ -294,15 +377,15 @@ const fetchReviews = async () => {
             className="w-full border rounded p-2 mb-2"
             rows={3}
           />
-          <button
-            onClick={() => {
-              if (!user) return openLoginModal();
-              handleReviewSubmit();
-            }}
-            className="bg-green-500 text-white px-4 py-2 rounded"
-          >
-            {editReviewId ? "수정 완료" : "리뷰 등록"}
-          </button>
+            <button
+              onClick={() => {
+                if (!user) return openLoginModal();
+                handleReviewSubmit();
+              }}
+              className="px-5 py-2 rounded-full bg-black text-white hover:bg-gray-800 transition shadow-sm"
+            >
+              {editReviewId ? "수정 완료" : "리뷰 등록"}
+            </button>
         </div>
 
         <div className="mb-4">
@@ -388,6 +471,12 @@ const fetchReviews = async () => {
 
 
       </div>
+          <AlertModal
+      isOpen={alertOpen}
+      title="입력 필요"
+      description="리뷰를 입력해주세요."
+      onClose={() => setAlertOpen(false)}
+    />
     </div>
   );
 }
