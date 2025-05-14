@@ -75,7 +75,18 @@ function Header() {
           <Link to="/" className="text-xl font-bold">🎵 Hennessy</Link>
           <Link to="/news" className="text-gray-700 hover:underline">News</Link>
           <Link to="/albums" className="text-gray-700 hover:underline">Album</Link>
-          <Link to="/add" className="text-gray-700 hover:underline">Add Content</Link>
+          <button
+            onClick={() => {
+              if (!user) {
+                setShowModal(true); // 🔒 비로그인 시 로그인 모달 열기
+              } else {
+                navigate("/add");   // 🔓 로그인 시 /add 페이지로 이동
+              }
+            }}
+            className="text-gray-700 hover:underline"
+          >
+            Add Content
+          </button>
         </div>
 
         {/* 가운데: 검색창 */}

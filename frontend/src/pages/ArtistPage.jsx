@@ -1,11 +1,13 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
 
 function ArtistPage() {
   const { slug } = useParams();
   const [artist, setArtist] = useState(null);
   const [albums, setAlbums] = useState([]);
+  const [credits, setCredits] = useState([]);
   const [activeTab, setActiveTab] = useState("albums");
   const [loading, setLoading] = useState(true);
 
@@ -15,6 +17,7 @@ function ArtistPage() {
       .then((res) => {
         setArtist(res.data.artist);
         setAlbums(res.data.albums);
+        setCredits(res.data.credits || []);
         setLoading(false);
       })
       .catch((err) => {
@@ -24,11 +27,11 @@ function ArtistPage() {
   }, [slug]);
 
   const filtered = {
-    albums: albums.filter((a) => a.type === "album"),
-    eps: albums.filter((a) => a.type === "ep"),
-    singles: albums.filter((a) => a.type === "single"),
-    collaborations: albums.filter((a) => a.type === "collaboration"),
-    credits: [], // 추후 구현
+  albums: albums.filter((a) => a.type === "album"),
+  eps: albums.filter((a) => a.type === "ep"),
+  singles: albums.filter((a) => a.type === "single"),
+  collaborations: albums.filter((a) => a.type === "collaboration"),
+  credits: credits,
   };
 
   if (loading) return <div className="p-4">로딩 중...</div>;
@@ -84,23 +87,66 @@ function ArtistPage() {
       </div>
 
       {/* 앨범 목록 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {filtered[activeTab].length > 0 ? (
-          filtered[activeTab].map((album) => (
-            <div key={album.id} className="text-center">
-              <img
-                src={album.image_url}
-                alt={album.title}
-                className="w-full rounded"
-              />
-              <p className="mt-2 font-medium">{album.title}</p>
-              <p className="text-sm text-gray-500">{album.release_date?.slice(0, 10)}</p>
-            </div>
-          ))
-        ) : (
-          <p className="text-sm text-gray-500 col-span-full">해당 콘텐츠가 없습니다.</p>
-        )}
-      </div>
+{activeTab !== "credits" && (
+  <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+    {filtered[activeTab].length > 0 ? (
+      filtered[activeTab].map((album) => (
+        <Link
+          key={album.id}
+          to={`/album/${album.slug}`}
+          className="block hover:opacity-80 transition"
+        >
+          <img
+            src={album.image_url}
+            alt={album.title}
+            className="w-full h-48 object-cover rounded mb-2"
+          />
+          <div className="text-sm font-medium">{album.title}</div>
+          <div className="text-xs text-gray-500">
+            {album.release_date?.slice(0, 10)}
+          </div>
+        </Link>
+      ))
+    ) : (
+      <p className="text-sm text-gray-500">앨범 정보가 없습니다.</p>
+    )}
+  </div>
+)}
+
+{activeTab === "credits" && (
+  <div className="space-y-4">
+    {credits.length > 0 ? (
+      credits.map((credit) => (
+        <div
+          key={credit.id}
+          className="flex items-center gap-4 border p-3 rounded hover:bg-gray-50"
+        >
+          <img
+            src={credit.album_image}
+            alt={credit.album_title}
+            className="w-16 h-16 object-cover rounded"
+          />
+          <div className="flex-1">
+            <Link
+              to={`/songs/${credit.song_id}`}
+              className="font-semibold text-blue-600 hover:underline"
+            >
+              {credit.song_title}
+            </Link>
+            <p className="text-sm text-gray-500">
+              from <span className="italic">{credit.album_title}</span>
+            </p>
+          </div>
+          <div className="text-sm text-gray-700">참여: 크레딧</div>
+        </div>
+      ))
+    ) : (
+      <p className="text-sm text-gray-500">크레딧 참여 정보가 없습니다.</p>
+    )}
+  </div>
+)}
+
+
     </div>
   );
 }

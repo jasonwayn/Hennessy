@@ -128,34 +128,40 @@ function MyPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {isMyPage && (
-              <button
-                onClick={() => setShowEditModal(true)}
-                className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex items-center justify-center text-sm font-medium"
-              >
-                프로필 편집
-              </button>
-            )}
+        <div className="grid grid-cols-2 gap-4 text-center">
+          {isMyPage && (
             <button
-              onClick={() => scrollToSection(ratingsRef)}
-              className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex items-center justify-center text-sm font-medium"
+              onClick={() => setShowEditModal(true)}
+              className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex flex-col items-center justify-center text-sm font-medium"
             >
-              평점
+              <div>프로필 편집</div>
             </button>
-            <button
-              onClick={() => scrollToSection(reviewsRef)}
-              className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex items-center justify-center text-sm font-medium"
-            >
-              리뷰
-            </button>
-            <button
-              onClick={() => scrollToSection(savedRef)}
-              className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex items-center justify-center text-sm font-medium"
-            >
-              보관함
-            </button>
-          </div>
+          )}
+
+          <button
+            onClick={() => scrollToSection(ratingsRef)}
+            className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex flex-col items-center justify-center text-sm font-medium"
+          >
+            <div>평점</div>
+            <div className="text-xs mt-1 text-gray-500">{ratingsGrouped.reduce((acc, group) => acc + JSON.parse(group.albums).length, 0)}</div>
+          </button>
+        
+          <button
+            onClick={() => scrollToSection(reviewsRef)}
+            className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex flex-col items-center justify-center text-sm font-medium"
+          >
+            <div>리뷰</div>
+            <div className="text-xs mt-1 text-gray-500">{reviews.length}</div>
+          </button>
+        
+          <button
+            onClick={() => scrollToSection(savedRef)}
+            className="w-28 h-28 bg-white bg-opacity-80 border border-[#f2bfb5] hover:bg-[#f5cfc7] transition rounded-xl shadow-sm flex flex-col items-center justify-center text-sm font-medium"
+          >
+            <div>보관함</div>
+            <div className="text-xs mt-1 text-gray-500">{savedReviews.length}</div>
+          </button>
+        </div>
         </div>
       </div>
 

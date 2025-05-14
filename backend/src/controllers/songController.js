@@ -82,17 +82,63 @@ exports.getSongDetail = (req, res) => {
   });
 };
 
-// 곡 정보 수정
+// 곡 정보 수정 및 아티스트 크레딧 테이블 반영
 exports.updateSongDetails = (req, res) => {
   const songId = req.params.id;
   const { description, credits } = req.body;
 
-  const query = `UPDATE songs SET description = ?, credits = ? WHERE id = ?`;
-  db.query(query, [description, credits, songId], (err, result) => {
+  const updateQuery = `UPDATE songs SET description = ?, credits = ? WHERE id = ?`;
+
+  db.query(updateQuery, [description, credits, songId], (err) => {
     if (err) {
       console.error("곡 정보 업데이트 실패:", err);
       return res.status(500).json({ message: "DB 오류" });
     }
-    res.json({ message: "곡 정보 업데이트 완료" });
+
+    // 1. 기존 크레딧 연결 삭제
+    const deleteQuery = `DELETE FROM artist_song_credits WHERE song_id = ?`;
+    db.query(deleteQuery, [songId], (delErr) => {
+      if (delErr) {
+        console.error("기존 크레딧 삭제 실패:", delErr);
+        return res.status(500).json({ message: "크레딧 초기화 실패" });
+      }
+
+      // 2. 크레딧에서 @이름 파싱
+      const matches = [...credits.matchAll(/@([\w\s]+)/g)].map((m) => m[1].trim());
+      const unique = [...new Set(matches)].filter(name => name.length >= 2);
+
+      if (unique.length === 0) {
+        return res.json({ message: "곡 정보 업데이트 완료 (추가할 크레딧 없음)" });
+      }
+
+      // 3. 해당 이름의 artist_id 가져오기
+      const getArtistIdsQuery = `SELECT id, name FROM artists WHERE name IN (?)`;
+      db.query(getArtistIdsQuery, [unique], (err2, artists) => {
+        if (err2) {
+          console.error("아티스트 조회 실패:", err2);
+          return res.status(500).json({ message: "DB 오류 (아티스트 조회)" });
+        }
+
+        if (!artists.length) {
+          return res.json({ message: "곡 정보 업데이트 완료 (일치하는 아티스트 없음)" });
+        }
+
+        // 4. 삽입용 쌍 만들기: [artist_id, song_id]
+        const values = artists.map(a => [a.id, songId]);
+        const insertQuery = `
+          INSERT INTO artist_song_credits (artist_id, song_id)
+          VALUES ?
+        `;
+
+        db.query(insertQuery, [values], (err3) => {
+          if (err3) {
+            console.error("크레딧 삽입 실패:", err3);
+            return res.status(500).json({ message: "크레딧 삽입 중 오류" });
+          }
+
+          res.json({ message: "곡 정보 및 크레딧 업데이트 완료" });
+        });
+      });
+    });
   });
 };

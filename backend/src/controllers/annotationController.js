@@ -124,6 +124,8 @@ exports.getAnnotationByLine = (req, res) => {
         a.user_id,
         u.nickname,
         u.email AS user_email,
+        u.profile_image_url,
+        u.id AS user_id,
         (
           SELECT COUNT(*) 
           FROM annotation_likes 

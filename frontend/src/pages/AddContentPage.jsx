@@ -5,9 +5,13 @@ import { storage } from "../firebase";
 import axios from "axios";
 import { getToken } from "../utils/getToken";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { useLoginModal } from "../contexts/LoginModalContext";
 
 function AddContentPage() {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
+  const { openLoginModal } = useLoginModal();
   const [activeTab, setActiveTab] = useState("artist");
 
   // Artist State
@@ -42,6 +46,13 @@ function AddContentPage() {
   const [newsImageFile, setNewsImageFile] = useState(null);
   const [newsImageUrl, setNewsImageUrl] = useState("");
   const [newsContent, setNewsContent] = useState("");
+
+  useEffect(() => {
+  if (!loading && !user) {
+    openLoginModal();       
+    navigate("/news");       
+  }
+}, [loading, user, navigate]);
 
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
