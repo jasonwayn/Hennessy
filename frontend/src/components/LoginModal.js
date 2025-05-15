@@ -36,7 +36,6 @@ function LoginModal({ onClose }) {
       onClose();
     } catch (error) {
       console.error(error);
-
       let message = "로그인에 실패했습니다.";
       if (error.code === "auth/user-not-found") {
         message = "존재하지 않는 사용자입니다.";
@@ -45,47 +44,50 @@ function LoginModal({ onClose }) {
       } else if (error.code === "auth/invalid-email") {
         message = "유효하지 않은 이메일입니다.";
       }
-
       setAlert({ open: true, message });
     }
   };
 
-const handleSignup = async () => {
-  if (password !== passwordAgain) {
-    setAlert({ open: true, message: "비밀번호가 일치하지 않습니다." });
-    return;
-  }
-
-  try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const idToken = await userCredential.user.getIdToken();
-
-    await axios.post("/api/auth/register", {}, {
-      headers: { Authorization: `Bearer ${idToken}` },
-    });
-
-    await axios.post("/api/register", { nickname }, {
-      headers: { Authorization: `Bearer ${idToken}` },
-    });
-
-    onClose();
-    navigate("/mypage");
-  } catch (error) {
-    console.error(error);
-
-    let message = "회원가입에 실패했습니다.";
-    if (error.code === "auth/email-already-in-use") {
-      message = "이미 사용 중인 이메일입니다.";
-    } else if (error.code === "auth/invalid-email") {
-      message = "유효하지 않은 이메일입니다.";
-    } else if (error.code === "auth/weak-password") {
-      message = "비밀번호는 최소 6자 이상이어야 합니다.";
+  const handleSignup = async () => {
+    if (!email.includes("@") || !email.includes(".")) {
+      return setAlert({ open: true, message: "유효하지 않은 이메일입니다." });
     }
 
-    setAlert({ open: true, message });
-  }
-};
+    if (password.length < 6) {
+      return setAlert({ open: true, message: "비밀번호는 최소 6자 이상이어야 합니다." });
+    }
 
+    if (password !== passwordAgain) {
+      return setAlert({ open: true, message: "비밀번호 확인과 일치하지 않습니다." });
+    }
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const idToken = await userCredential.user.getIdToken();
+
+      await axios.post("/api/auth/register", {}, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+
+      await axios.post("/api/register", { nickname }, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+
+      onClose();
+      navigate("/mypage");
+    } catch (error) {
+      console.error(error);
+      let message = "회원가입에 실패했습니다.";
+      if (error.code === "auth/email-already-in-use") {
+        message = "이미 사용 중인 이메일입니다.";
+      } else if (error.code === "auth/invalid-email") {
+        message = "유효하지 않은 이메일입니다.";
+      } else if (error.code === "auth/weak-password") {
+        message = "비밀번호는 최소 6자 이상이어야 합니다.";
+      }
+      setAlert({ open: true, message });
+    }
+  };
 
   const handleResetPassword = () => {
     setShowForgotModal(true);

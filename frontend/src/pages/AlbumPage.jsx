@@ -181,7 +181,72 @@ function AlbumPage() {
   if (loading) return <div className="p-4">로딩 중...</div>;
   if (!album) return <div className="p-4">앨범을 찾을 수 없습니다.</div>;
 
-  return <div>... (생략된 렌더링 부분) ...</div>;
+  return (
+    <div className="p-8">
+      <h1 className="text-3xl font-bold mb-4">{album.title}</h1>
+      <p className="mb-2">장르: {album.genre}</p>
+      <p className="mb-2">발매일: {album.release_date}</p>
+      <p className="mb-4">설명: {album.description}</p>
+
+      <div>
+        <label>내 평점:</label>
+        <select value={userRating ?? ""} onChange={handleRatingChange}>
+          <option value="" disabled>
+            선택하세요
+          </option>
+          {[...Array(21)].map((_, i) => {
+            const score = (i * 0.5).toFixed(1);
+            return (
+              <option key={score} value={score}>
+                {score}
+              </option>
+            );
+          })}
+        </select>
+        <p>평균 평점: {averageRating ?? "-"} ({ratingCount ?? 0}명)</p>
+      </div>
+
+      <h2 className="text-2xl font-semibold mt-8">수록곡</h2>
+      <ul>
+        {songs.map((song) => (
+          <li key={song.id}>{song.title}</li>
+        ))}
+      </ul>
+
+      <h2 className="text-2xl font-semibold mt-8">리뷰</h2>
+      <textarea
+        value={newReview}
+        onChange={(e) => setNewReview(e.target.value)}
+        placeholder="리뷰를 입력하세요"
+      />
+      <button onClick={handleReviewSubmit}>{editReviewId ? "수정 완료" : "등록"}</button>
+
+      <ul>
+        {reviews.map((review) => (
+          <li key={review.id} id={`review-${review.id}`}>
+            <p>{review.nickname} ({review.user_rating})</p>
+            <p>{review.review_text}</p>
+            <button onClick={() => handleLikeToggle(review.id)}>좋아요 {review.like_count}</button>
+            {review.is_owner ? (
+              <>
+                <button onClick={() => handleEdit(review.id, review.review_text)}>수정</button>
+                <button onClick={() => handleDelete(review.id)}>삭제</button>
+              </>
+            ) : (
+              <button onClick={() => handleSaveToggle(review.id)}>{review.saved ? "저장됨" : "저장"}</button>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      <AlertModal
+        isOpen={alertOpen}
+        title="입력 필요"
+        description="리뷰를 입력해주세요."
+        onClose={() => setAlertOpen(false)}
+      />
+    </div>
+  );
 }
 
 export default AlbumPage;
