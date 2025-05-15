@@ -170,20 +170,12 @@ function LoginModal({ onClose }) {
         )}
       </div>
 
-      {alertOpen && (
-        <AlertModal
-          isOpen={true}
-          title="알림"
-          description={alertMessage || "오류가 발생했습니다."}
-          onClose={() => {
-            setAlertOpen(false);
-            if (alertMessage.includes("전송")) {
-              setEmail(""); // 입력 필드 초기화
-              onClose(); // 모달 닫기
-            }
-          }}
-        />
-      )}
+      <AlertModal
+        isOpen={alert.open}
+        title="알림"
+        description={alert.message}
+        onClose={() => setAlert({ open: false, message: "" })}
+      />
 
       <ConfirmModal
         isOpen={confirm.open}
