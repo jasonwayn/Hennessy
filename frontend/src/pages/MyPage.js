@@ -16,7 +16,7 @@ function MyPage() {
   const [nickname, setNickname] = useState("");
   const [profileImage, setProfileImage] = useState(null);
   const [reviews, setReviews] = useState([]);
-  const [offset, setOffset] = useState(0);
+  const [offset, setOffset] = useState(5);
   const [ratingsGrouped, setRatingsGrouped] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -210,28 +210,35 @@ function MyPage() {
 
       <div ref={reviewsRef} className="mb-10">
         <h3 className="text-xl font-semibold mb-2 border-l-4 pl-2 border-[#db4c3f]">내 리뷰</h3>
-          {reviews.map((r) => (
-            <Link
-              key={r.id}
-              to={`/album/${r.artist_slug}/${r.album_slug}#review-${r.id}`}
-              className="flex gap-4 border p-4 rounded mb-2 hover:bg-gray-50 transition"
-            >
-              <img
-                src={r.image_url}
-                alt={r.album_title}
-                className="w-16 h-16 object-cover rounded"
-              />
-              <div className="flex-1">
-                <p className="text-gray-800 mb-1 line-clamp-2">{r.review_text}</p>
-                <p className="text-sm text-gray-500">
-                  {r.artist_name} - {r.album_title}
-                </p>
-              </div>
-            </Link>
-          ))}
-        <button onClick={loadMoreReviews} className="mt-2 text-blue-500 underline">
-          더보기
-        </button>
+            
+        {reviews.slice(0, offset).map((r) => (
+          <Link
+            key={r.id}
+            to={`/album/${r.artist_slug}/${r.album_slug}#review-${r.id}`}
+            className="flex gap-4 border p-4 rounded mb-2 hover:bg-gray-50 transition"
+          >
+            <img
+              src={r.image_url}
+              alt={r.album_title}
+              className="w-16 h-16 object-cover rounded"
+            />
+            <div className="flex-1">
+              <p className="text-gray-800 mb-1 line-clamp-2">{r.review_text}</p>
+              <p className="text-sm text-gray-500">
+                {r.artist_name} - {r.album_title}
+              </p>
+            </div>
+          </Link>
+        ))}
+      
+        {reviews.length > offset && (
+          <button
+            onClick={() => setOffset(offset + 5)}
+            className="mt-2 text-sm bg-gray-100 px-3 py-1 rounded hover:bg-gray-200"
+          >
+            더보기
+          </button>
+        )}
       </div>
 
       <div ref={savedRef}>
