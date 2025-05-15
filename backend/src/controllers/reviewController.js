@@ -123,12 +123,14 @@ exports.getReviewsPublic = (req, res) => {
           u.id AS user_id,
           u.nickname,
           u.profile_image_url AS profile_image,
-          COUNT(rl.id) AS like_count
+          COUNT(rl.id) AS like_count,
+          ar.rating AS user_rating
         FROM reviews r
         JOIN users u ON r.user_id = u.id
         LEFT JOIN review_likes rl ON r.id = rl.review_id
+        LEFT JOIN album_ratings ar ON ar.album_id = r.album_id AND ar.user_id = r.user_id
         WHERE r.album_id = ?
-        GROUP BY r.id, r.review_text, r.created_at, u.id, u.nickname, u.profile_image_url
+        GROUP BY r.id, r.review_text, r.created_at, u.id, u.nickname, u.profile_image_url, ar.rating
         ORDER BY ${sort}
       `;
 
