@@ -29,7 +29,7 @@ function App() {
         <LoginModalProvider> 
           <Routes>
             <Route element={<Layout />}>
-              <Route element={<Navigate to="/news"/>} />
+              <Route path="/" element={<Navigate to="/news"/>} />
               <Route path="/mypage" element={<MyPage />} />
               <Route path="/user/:id" element={<UserPage />} />
               <Route path="/album/:artistSlug/:albumSlug" element={<AlbumPage />} />
