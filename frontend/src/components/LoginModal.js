@@ -1,3 +1,4 @@
+// LoginModal.jsx
 import { useState } from "react";
 import {
   createUserWithEmailAndPassword,
@@ -7,6 +8,8 @@ import {
 import { auth } from "../firebase";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import AlertModal from "./AlertModal";
+import ConfirmModal from "./ConfirmModal";
 
 function LoginModal({ onClose }) {
   const [mode, setMode] = useState("login");
@@ -14,6 +17,8 @@ function LoginModal({ onClose }) {
   const [password, setPassword] = useState("");
   const [passwordAgain, setPasswordAgain] = useState("");
   const [nickname, setNickname] = useState("");
+  const [alert, setAlert] = useState({ open: false, message: "" });
+  const [confirm, setConfirm] = useState({ open: false });
   const navigate = useNavigate();
 
   const resetFields = () => {
@@ -29,13 +34,13 @@ function LoginModal({ onClose }) {
       onClose();
     } catch (error) {
       console.error(error);
-      alert("로그인 실패: " + error.message);
+      setAlert({ open: true, message: "로그인 실패: " + error.message });
     }
   };
 
   const handleSignup = async () => {
     if (password !== passwordAgain) {
-      alert("비밀번호가 일치하지 않습니다.");
+      setAlert({ open: true, message: "비밀번호가 일치하지 않습니다." });
       return;
     }
 
@@ -43,40 +48,39 @@ function LoginModal({ onClose }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const idToken = await userCredential.user.getIdToken();
 
-      // ✅ Step 1: DB에 email 등록 (users 테이블)
       await axios.post("/api/auth/register", {}, {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
+        headers: { Authorization: `Bearer ${idToken}` },
       });
 
-      // ✅ Step 2: nickname 등록
       await axios.post("/api/register", { nickname }, {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
+        headers: { Authorization: `Bearer ${idToken}` },
       });
 
-      alert("회원가입 완료!");
       onClose();
       navigate("/mypage");
     } catch (error) {
       console.error(error);
-      alert("회원가입 실패: " + error.message);
+      setAlert({ open: true, message: "회원가입 실패: " + error.message });
     }
   };
 
-  const handleResetPassword = async () => {
-    const inputEmail = prompt("비밀번호 재설정 링크를 받을 이메일을 입력해주세요:");
-    if (!inputEmail) return;
-
-    try {
-      await sendPasswordResetEmail(auth, inputEmail);
-      alert("비밀번호 재설정 메일을 전송했습니다.");
-    } catch (error) {
-      console.error(error);
-      alert("메일 전송 실패: " + error.message);
-    }
+  const handleResetPassword = () => {
+    setConfirm({
+      open: true,
+      title: "비밀번호 재설정",
+      description: "비밀번호 재설정 링크를 받을 이메일을 입력해주세요:",
+      onConfirm: async () => {
+        try {
+          await sendPasswordResetEmail(auth, email);
+          setAlert({ open: true, message: "재설정 링크를 전송했습니다." });
+        } catch (error) {
+          console.error(error);
+          setAlert({ open: true, message: "메일 전송 실패: " + error.message });
+        }
+        setConfirm({ open: false });
+      },
+      onCancel: () => setConfirm({ open: false }),
+    });
   };
 
   return (
@@ -155,6 +159,21 @@ function LoginModal({ onClose }) {
           </p>
         )}
       </div>
+
+      <AlertModal
+        isOpen={alert.open}
+        title="알림"
+        description={alert.message}
+        onClose={() => setAlert({ open: false, message: "" })}
+      />
+
+      <ConfirmModal
+        isOpen={confirm.open}
+        title={confirm.title}
+        description={confirm.description}
+        onConfirm={confirm.onConfirm}
+        onCancel={confirm.onCancel}
+      />
     </div>
   );
 }

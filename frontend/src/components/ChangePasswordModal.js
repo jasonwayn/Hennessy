@@ -1,18 +1,25 @@
 // src/components/ChangePasswordModal.js
 import { useState } from "react";
 import { auth } from "../firebase";
-import { reauthenticateWithCredential, EmailAuthProvider, updatePassword } from "firebase/auth";
+import {
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  updatePassword,
+} from "firebase/auth";
+import ConfirmModal from "./ConfirmModal";
+import AlertModal from "./AlertModal";
 
 function ChangePasswordModal({ onClose }) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newPasswordAgain, setNewPasswordAgain] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
 
   const handleChange = async () => {
     setError("");
-    setSuccess(false);
 
     if (newPassword !== newPasswordAgain) {
       return setError("새 비밀번호가 일치하지 않습니다.");
@@ -25,16 +32,27 @@ function ChangePasswordModal({ onClose }) {
       const user = auth.currentUser;
       const credential = EmailAuthProvider.credential(user.email, currentPassword);
       await reauthenticateWithCredential(user, credential);
+      setShowConfirm(true);
+    } catch (err) {
+      console.error(err);
+      setError("현재 비밀번호가 일치하지 않습니다.");
+    }
+  };
+
+  const confirmPasswordChange = async () => {
+    try {
+      const user = auth.currentUser;
       await updatePassword(user, newPassword);
-      setSuccess(true);
       setCurrentPassword("");
       setNewPassword("");
       setNewPasswordAgain("");
-      alert("비밀번호가 변경되었습니다.");
-      onClose();
+      setAlertMessage("비밀번호가 성공적으로 변경되었습니다.");
+      setShowAlert(true);
+      setShowConfirm(false);
     } catch (err) {
       console.error(err);
-      setError("비밀번호 변경 실패: " + err.message);
+      setAlertMessage("비밀번호 변경 실패: " + err.message);
+      setShowAlert(true);
     }
   };
 
@@ -76,6 +94,24 @@ function ChangePasswordModal({ onClose }) {
         >
           변경하기
         </button>
+
+        <ConfirmModal
+          isOpen={showConfirm}
+          title="비밀번호 변경"
+          description="정말 비밀번호를 변경하시겠습니까?"
+          onConfirm={confirmPasswordChange}
+          onCancel={() => setShowConfirm(false)}
+        />
+
+        <AlertModal
+          isOpen={showAlert}
+          title="알림"
+          description={alertMessage}
+          onClose={() => {
+            setShowAlert(false);
+            if (alertMessage.includes("성공적으로")) onClose();
+          }}
+        />
       </div>
     </div>
   );
