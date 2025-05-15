@@ -79,7 +79,7 @@ function UserPage() {
             >
               <div>평점</div>
               <div className="text-xs mt-1 text-gray-500">
-                {ratingsGrouped.reduce((acc, group) => acc + JSON.parse(group.albums).length, 0)}개
+                {ratingsGrouped.reduce((acc, group) => acc + group.albums.length, 0)}개
               </div>
             </button>
 
@@ -101,7 +101,7 @@ function UserPage() {
         <h3 className="text-xl font-semibold mb-2 border-l-4 pl-2 border-[#db4c3f]">작성한 평점</h3>
         {ratingsGrouped.map((group) => {
           const groupKey = group.rating_group;
-          const allAlbums = JSON.parse(group.albums);
+          const allAlbums = group.albums;
           const visibleCount = expandedRatings[groupKey] || 8;
           const visibleAlbums = allAlbums.slice(0, visibleCount);
 

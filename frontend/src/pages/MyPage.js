@@ -142,7 +142,7 @@ function MyPage() {
             {isMyPage && <StatButton label="프로필 편집" onClick={() => setShowEditModal(true)} />}
             <StatButton
               label="평점"
-              count={ratingsGrouped.reduce((acc, group) => acc + JSON.parse(group.albums).length, 0)}
+              count={ratingsGrouped.reduce((acc, group) => acc + group.albums.length, 0)}
               onClick={() => scrollToSection(ratingsRef)}
             />
             <StatButton
@@ -164,7 +164,7 @@ function MyPage() {
         <h3 className="text-xl font-semibold mb-2 border-l-4 pl-2 border-[#db4c3f]">내 평점</h3>
         {ratingsGrouped.map((group) => {
           const groupKey = group.rating_group;
-          const allAlbums = JSON.parse(group.albums);
+          const allAlbums = group.albums;
           const visibleCount = expandedRatings[groupKey] || 8;
           const visibleAlbums = allAlbums.slice(0, visibleCount);
 
