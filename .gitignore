@@ -1,9 +1,10 @@
-# Node
+# Node modules
 node_modules/
 
-# 환경변수, 키
+# 환경변수, API 키
 .env
 firebase-service-key.json
+backend/hennessy-*.json
 
-# 로그
+# 로그 파일
 npm-debug.log

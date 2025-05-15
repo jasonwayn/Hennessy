@@ -1,6 +1,7 @@
 // src/components/ChangePasswordModal.js
 import { useState } from "react";
 import { auth } from "../firebase";
+import ForgotPasswordModal from "./ForgotPasswordModal";
 import {
   reauthenticateWithCredential,
   EmailAuthProvider,
@@ -17,6 +18,8 @@ function ChangePasswordModal({ onClose }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+  const [showForgotModal, setShowForgotModal] = useState(false);
+
 
   const handleChange = async () => {
     setError("");
