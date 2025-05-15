@@ -67,15 +67,17 @@ exports.getArtistDetail = (req, res) => {
     // 2. 앨범 조회
     const albumQuery = `
       (
-        SELECT a.id, a.title, a.slug, a.genre, a.release_date, a.image_url, a.type
+        SELECT a.id, a.title, a.slug, a.genre, a.release_date, a.image_url, a.type, ar.slug AS artist_slug
         FROM albums a
+        JOIN artists ar ON a.artist_id = ar.id
         WHERE a.artist_id = ?
       )
       UNION
       (
-        SELECT a.id, a.title, a.slug, a.genre, a.release_date, a.image_url, a.type
+        SELECT a.id, a.title, a.slug, a.genre, a.release_date, a.image_url, a.type, ar.slug AS artist_slug
         FROM albums a
         JOIN album_artists aa ON a.id = aa.album_id
+        JOIN artists ar ON a.artist_id = ar.id
         WHERE aa.artist_id = ?
       )
       ORDER BY release_date DESC

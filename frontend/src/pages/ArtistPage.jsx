@@ -96,7 +96,7 @@ function ArtistPage() {
             filtered[activeTab].map((album) => (
               <Link
                 key={album.id}
-                to={`/album/${artist.slug}/${album.slug}`}
+                to={`/album/${album.artist_slug}/${album.slug}`}
                 className="block bg-white rounded shadow hover:shadow-md transition overflow-hidden"
               >
                 <img

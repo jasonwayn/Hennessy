@@ -11,10 +11,10 @@ exports.getAlbumDetail = (req, res) => {
     SELECT a.*, ar.name AS artist_name, ar.slug AS artist_slug
     FROM albums a
     JOIN artists ar ON a.artist_id = ar.id
-    WHERE a.slug = ? AND ar.slug = ?
+    WHERE a.slug = ?
   `;
 
-  db.query(albumQuery, [albumSlug, artistSlug], (err, results) => {
+  db.query(albumQuery, [albumSlug], (err, results) => {
     if (err) {
       console.error("앨범 조회 실패:", err);
       return res.status(500).json({ message: "DB 오류" });
@@ -26,30 +26,51 @@ exports.getAlbumDetail = (req, res) => {
 
     const album = results[0];
 
-    // collaboration인 경우: 추가 아티스트들 불러오기
-    if (album.type === "collaboration") {
-      const collabQuery = `
-        SELECT ar.id, ar.name, ar.slug, ar.image_url
-        FROM album_artists aa
-        JOIN artists ar ON aa.artist_id = ar.id
-        WHERE aa.album_id = ?
-      `;
+    // artistSlug가 일치하지 않는 경우, 협업 아티스트에도 있는지 확인
+    const checkSlug =
+      album.artist_slug === artistSlug
+        ? Promise.resolve(true)
+        : new Promise((resolve) => {
+            db.query(
+              `SELECT 1 FROM album_artists aa
+               JOIN artists ar ON aa.artist_id = ar.id
+               WHERE aa.album_id = ? AND ar.slug = ?`,
+              [album.id, artistSlug],
+              (err2, slugResults) => {
+                if (err2) return resolve(false);
+                resolve(slugResults.length > 0);
+              }
+            );
+          });
 
-      db.query(collabQuery, [album.id], (err2, artists) => {
-        if (err2) {
-          console.error("협업 아티스트 조회 실패:", err2);
-          return res.status(500).json({ message: "DB 오류 (협업 아티스트)" });
-        }
+    checkSlug.then((isValidArtist) => {
+      if (!isValidArtist) {
+        return res.status(404).json({ message: "해당 아티스트의 앨범이 아님" });
+      }
 
-        album.collaborators = artists;
+      // collaboration인 경우 협업 아티스트 추가
+      if (album.type === "collaboration") {
+        db.query(
+          `SELECT ar.id, ar.name, ar.slug, ar.image_url
+           FROM album_artists aa
+           JOIN artists ar ON aa.artist_id = ar.id
+           WHERE aa.album_id = ?`,
+          [album.id],
+          (err3, artists) => {
+            if (err3) {
+              console.error("협업 아티스트 조회 실패:", err3);
+              return res.status(500).json({ message: "DB 오류 (협업 아티스트)" });
+            }
+            album.collaborators = artists;
+            res.json(album);
+          }
+        );
+      } else {
         res.json(album);
-      });
-    } else {
-      res.json(album);
-    }
+      }
+    });
   });
 };
-
 
 
 // 앨범 추가
