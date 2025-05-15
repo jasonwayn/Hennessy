@@ -89,9 +89,19 @@ function LoginModal({ onClose }) {
     }
   };
 
-  const handleResetPassword = () => {
-    setShowForgotModal(true);
+  const handleResetPassword = async () => {
+    const inputEmail = prompt("비밀번호 재설정 링크를 받을 이메일을 입력해주세요:");
+    if (!inputEmail) return;
+
+    try {
+      await sendPasswordResetEmail(auth, inputEmail);
+      alert("비밀번호 재설정 메일을 전송했습니다.");
+    } catch (error) {
+      console.error(error);
+      alert("메일 전송 실패: " + error.message);
+    }
   };
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
@@ -184,9 +194,6 @@ function LoginModal({ onClose }) {
         onConfirm={confirm.onConfirm}
         onCancel={confirm.onCancel}
       />
-      {showForgotModal && (
-        <ForgotPasswordModal onClose={() => setShowForgotModal(false)} />
-      )}
     </div>
   );
 }
