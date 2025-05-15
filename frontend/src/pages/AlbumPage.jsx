@@ -251,19 +251,18 @@ const fetchReviews = async () => {
         </div>
         <div className="flex-1">
           <h1 className="text-3xl font-bold mb-2">{album.title}</h1>
-          <p className="text-gray-600 mb-1">
-            아티스트: <Link to={`/artist/${album.artist_slug}`} className="text-blue-600 hover:underline">{album.artist_name}</Link>
-          </p>
-          {album.type === "collaboration" && album.collaborators?.length > 1 && (
-            <p className="text-gray-600 text-sm mb-1">
-              참여 아티스트: {album.collaborators.map((a, idx) => (
-                <span key={a.id}>
-                  <Link to={`/artist/${a.slug}`} className="text-blue-600 hover:underline">{a.name}</Link>
-                  {idx < album.collaborators.length - 1 && ", "}
-                </span>
-              ))}
-            </p>
-          )}
+        <p className="text-gray-600 mb-1">
+          아티스트:{" "}
+          {album.collaborators?.map((a, idx) => (
+            <span key={a.id}>
+              <Link to={`/artist/${a.slug}`} className="text-blue-600 hover:underline">
+                {a.name}
+              </Link>
+              {idx < album.collaborators.length - 1 && ", "}
+            </span>
+          ))}
+        </p>
+        
           <p className="text-gray-600 mb-1">장르: {album.genre}</p>
           <p className="text-gray-600 mb-1">발매일: {album.release_date?.slice(0, 10)}</p>
           {album.description && <p className="text-gray-700 mt-4 whitespace-pre-line">{album.description}</p>}
