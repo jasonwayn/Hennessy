@@ -1,4 +1,3 @@
-// src/pages/AddContentPage.jsx
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { getToken } from "../utils/getToken";
@@ -14,7 +13,6 @@ function AddContentPage() {
   const { openLoginModal } = useLoginModal();
   const [activeTab, setActiveTab] = useState("artist");
 
-  // Artist State
   const [name, setName] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
   const [about, setAbout] = useState("");
@@ -23,7 +21,6 @@ function AddContentPage() {
   const [formedDate, setFormedDate] = useState("");
   const [description, setDescription] = useState("");
 
-  // Album State
   const [albumTitle, setAlbumTitle] = useState("");
   const [albumArtistId, setAlbumArtistId] = useState("");
   const [albumType, setAlbumType] = useState("album");
@@ -43,8 +40,6 @@ function AddContentPage() {
   const [newsSummary, setNewsSummary] = useState("");
   const [newsImageUrl, setNewsImageUrl] = useState("");
   const [newsContent, setNewsContent] = useState("");
-
-  //alertmodal
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
 
@@ -508,19 +503,8 @@ const handleSubmitAlbum = async () => {
                     }}
                   />
                 </label>
-                <label className="block mb-1">
-                  Track {index + 1}
-                  <input
-                    type="number"
-                    className="w-full border p-1 rounded"
-                    value={track.track_number}
-                    onChange={(e) => {
-                      const updated = [...tracks];
-                      updated[index].track_number = Number(e.target.value);
-                      setTracks(updated);
-                    }}
-                  />
-                </label>
+                <p className="text-sm mb-1 font-medium text-gray-700">Track {index + 1}</p>
+
                 <label className="block mb-1">
                   가사
                   <textarea

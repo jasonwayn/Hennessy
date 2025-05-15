@@ -72,7 +72,7 @@ function Header() {
       <header className="bg-white shadow px-6 py-4 flex items-center justify-between relative">
         {/* 왼쪽: 로고 & 메뉴 */}
         <div className="flex items-center gap-6">
-          <Link to="/" className="text-xl font-bold">🎵 Hennessy</Link>
+          <span className="text-xl font-bold cursor-default select-none">Hennessy</span>
           <Link to="/news" className="text-gray-700 hover:underline">News</Link>
           <Link to="/albums" className="text-gray-700 hover:underline">Album</Link>
           <button
