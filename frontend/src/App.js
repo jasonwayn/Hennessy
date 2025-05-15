@@ -14,7 +14,13 @@ import AddContentPage from "./pages/AddContentPage";
 import SongPage from "./pages/SongPage";
 import { LoginModalProvider } from "./contexts/LoginModalContext.js";
 import UserPage from "./pages/UserPage";
+import { Navigate } from "react-router-dom";
+import axios from "axios";
 
+axios.defaults.baseURL =
+  process.env.NODE_ENV === "development"
+    ? "http://localhost:5000"
+    : "https://hennessy-backend.onrender.com";
 
 function App() {
   return (
@@ -23,6 +29,7 @@ function App() {
         <LoginModalProvider> 
           <Routes>
             <Route element={<Layout />}>
+              <Route element={<Navigate to="/news"/>} />
               <Route path="/mypage" element={<MyPage />} />
               <Route path="/user/:id" element={<UserPage />} />
               <Route path="/album/:artistSlug/:albumSlug" element={<AlbumPage />} />
