@@ -229,47 +229,62 @@ useEffect(() => {
       <span>{line}</span>
     </p>
   ));
-
 const renderCreditsWithLinks = (text) => {
-  // @로 시작해서 공백 전까지 모든 글자(하이픈 포함) 인식
   const regex = /@([\w\- ]+)/g;
-  const lines = text.split("\n"); // 줄바꿈 기준으로 분리
+
+  const lines = text.split("\n");
 
   return lines.flatMap((line, lineIndex) => {
-    const segments = line.split(regex);
-    const rendered = segments.map((part, idx) => {
-      if (part.startsWith("@")) {
-        const name = part.slice(1).trim();
-        const artist = creditArtists.find((a) => a.name === name && a.data);
-        const slug = artist?.data?.slug || name.toLowerCase().replace(/\s+/g, "-");
+    const result = [];
+    let lastIndex = 0;
 
-        return (
-          <Link
-            key={`link-${lineIndex}-${idx}`}
-            to={`/artist/${slug}`}
-            className="inline-flex items-center gap-2 text-blue-600 hover:underline"
-          >
-            {artist?.data?.image_url && (
-              <img
-                src={artist.data.image_url}
-                alt={name}
-                className="w-4 h-4 rounded-full object-cover"
-              />
-            )}
-            {part}
-          </Link>
+    for (const match of line.matchAll(regex)) {
+      const fullMatch = match[0]; // '@Kanye West'
+      const name = match[1];      // 'Kanye West'
+      const start = match.index;
+
+      // 앞쪽 일반 텍스트 추가
+      if (start > lastIndex) {
+        result.push(
+          <span key={`text-${lineIndex}-${start}`}>{line.slice(lastIndex, start)}</span>
         );
-      } else {
-        return <span key={`text-${lineIndex}-${idx}`}>{part}</span>;
       }
-    });
 
-    // 줄바꿈 추가 (마지막 줄 제외)
-    return lineIndex < lines.length - 1
-      ? [...rendered, <br key={`br-${lineIndex}`} />]
-      : rendered;
+      const artist = creditArtists.find((a) => a.name === name && a.data);
+      const slug = artist?.data?.slug || name.toLowerCase().replace(/\s+/g, "-");
+
+      result.push(
+        <Link
+          key={`link-${lineIndex}-${start}`}
+          to={`/artist/${slug}`}
+          className="inline-flex items-center gap-2 text-blue-600 hover:underline"
+        >
+          {artist?.data?.image_url && (
+            <img
+              src={artist.data.image_url}
+              alt={name}
+              className="w-4 h-4 rounded-full object-cover"
+            />
+          )}
+          {fullMatch}
+        </Link>
+      );
+
+      lastIndex = start + fullMatch.length;
+    }
+
+    // 남은 텍스트
+    if (lastIndex < line.length) {
+      result.push(
+        <span key={`tail-${lineIndex}`}>{line.slice(lastIndex)}</span>
+      );
+    }
+
+    // 줄바꿈 추가
+    return lineIndex < lines.length - 1 ? [...result, <br key={`br-${lineIndex}`} />] : result;
   });
 };
+
 
 
 
