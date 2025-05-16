@@ -429,11 +429,12 @@ const handleMentionSelect = (artist) => {
                                 <Heart
                                   className="w-4 h-4"
                                   strokeWidth={2}
-                                  stroke={a.liked ? "#3b82f6" : "currentColor"} // tailwind 'blue-500'
-                                  fill={a.liked ? "#3b82f6" : "white"}           // 내부 채움 여부
+                                  stroke={a.liked ? "#3b82f6" : "currentColor"}
+                                  fill={a.liked ? "#3b82f6" : "white"}
                                 />
                                 <span className="text-sm">{a.likes}</span>
                               </button>
+
 
                               {isAuthor && (
                                 <>
