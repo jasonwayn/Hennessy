@@ -201,7 +201,7 @@ useEffect(() => {
           : a
       )
     );
-  
+
     try {
       const token = await getToken();
       await axios.post(
@@ -231,33 +231,48 @@ useEffect(() => {
   ));
 
 const renderCreditsWithLinks = (text) => {
-  const parts = text.split(/(@\w[\w\s]*)/g);
-  return parts.map((part, index) => {
-    if (part.startsWith("@")) {
-      const name = part.slice(1).trim();
-      const artist = creditArtists.find((a) => a.name === name && a.data);
-      const slug = artist?.data?.slug || name.toLowerCase().replace(/\s+/g, "-");
-      return (
-        <Link
-          key={index}
-          to={`/artist/${slug}`}
-          className="inline-flex items-center gap-2 text-blue-600 hover:underline"
-        >
-          {artist?.data?.image_url && (
-            <img
-              src={artist.data.image_url}
-              alt={name}
-              className="w-4 h-4 rounded-full object-cover"
-            />
-          )}
-          {part}
-        </Link>
-      );
-    } else {
-      return <span key={index}>{part}</span>;
-    }
+  // @로 시작해서 공백 전까지 모든 글자(하이픈 포함) 인식
+  const regex = /(@[^\s@:\n]+)/g;
+
+  const lines = text.split("\n"); // 줄바꿈 기준으로 분리
+
+  return lines.flatMap((line, lineIndex) => {
+    const segments = line.split(regex);
+    const rendered = segments.map((part, idx) => {
+      if (part.startsWith("@")) {
+        const name = part.slice(1).trim();
+        const artist = creditArtists.find((a) => a.name === name && a.data);
+        const slug = artist?.data?.slug || name.toLowerCase().replace(/\s+/g, "-");
+
+        return (
+          <Link
+            key={`link-${lineIndex}-${idx}`}
+            to={`/artist/${slug}`}
+            className="inline-flex items-center gap-2 text-blue-600 hover:underline"
+          >
+            {artist?.data?.image_url && (
+              <img
+                src={artist.data.image_url}
+                alt={name}
+                className="w-4 h-4 rounded-full object-cover"
+              />
+            )}
+            {part}
+          </Link>
+        );
+      } else {
+        return <span key={`text-${lineIndex}-${idx}`}>{part}</span>;
+      }
+    });
+
+    // 줄바꿈 추가 (마지막 줄 제외)
+    return lineIndex < lines.length - 1
+      ? [...rendered, <br key={`br-${lineIndex}`} />]
+      : rendered;
   });
 };
+
+
 
 const handleCreditsChange = (e) => {
   const value = e.target.value;
