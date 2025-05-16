@@ -6,6 +6,8 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import AlertModal from "../components/AlertModal";
 import ConfirmModal from "../components/ConfirmModal";
+import { Heart } from "lucide-react";
+
 
 function SongPage() {
   const { id } = useParams();
@@ -418,9 +420,16 @@ const handleMentionSelect = (artist) => {
                             </div>
 
                             <div className="flex gap-2 items-center">
-                              <button onClick={() => handleToggleLike(a.id)} className="text-sm text-gray-500 hover:text-red-500">
-                                ❤️ <span>{a.likes}개</span>
+                              <button
+                                onClick={() => handleToggleLike(a.id)}
+                                className={`flex items-center gap-1 px-2 py-1 rounded-full border ${
+                                  a.liked ? "border-red-500 text-red-500" : "border-black text-black"
+                                } bg-white hover:bg-gray-50 transition`}
+                              >
+                                <Heart className="w-4 h-4" strokeWidth={2} fill={a.liked ? "#ef4444" : "white"} />
+                                <span className="text-sm">{a.likes}</span>
                               </button>
+
                               {isAuthor && (
                                 <>
                                   <button

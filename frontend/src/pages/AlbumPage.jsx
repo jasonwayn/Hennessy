@@ -6,6 +6,7 @@ import { useLoginModal } from "../contexts/LoginModalContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useLocation } from "react-router-dom";
 import AlertModal from "../components/AlertModal";
+import { ThumbsUp } from "lucide-react";
 
 function AlbumPage() {
   const { artistSlug, albumSlug } = useParams();
@@ -428,12 +429,12 @@ const fetchReviews = async () => {
       <div className="flex gap-4 text-sm">
         <button
           onClick={() => handleLikeToggle(review.id)}
-          className={`flex items-center space-x-1 ${
-            review.liked ? "text-blue-600" : "text-gray-500"
-          } hover:text-blue-700`}
+          className={`flex items-center gap-1 px-2 py-1 rounded-full border ${
+            review.liked ? "border-blue-600 text-blue-600" : "border-black text-black"
+          } bg-white hover:bg-gray-100 transition`}
         >
-          <span>👍</span>
-          <span>{review.like_count}</span>
+          <ThumbsUp className="w-4 h-4" strokeWidth={2} />
+          <span className="text-sm">{review.like_count}</span>
         </button>
 
         {review.is_owner ? (
