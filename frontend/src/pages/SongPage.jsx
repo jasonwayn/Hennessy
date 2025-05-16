@@ -194,6 +194,14 @@ useEffect(() => {
 
 
   const handleToggleLike = async (annotationId) => {
+    setAnnotations((prev) =>
+      prev.map((a) =>
+        a.id === annotationId
+          ? { ...a, liked: !a.liked, likes: a.liked ? a.likes - 1 : a.likes + 1 }
+          : a
+      )
+    );
+  
     try {
       const token = await getToken();
       await axios.post(
@@ -201,12 +209,12 @@ useEffect(() => {
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      handleLineClick(selectedText);
     } catch (err) {
       console.error("좋아요 실패:", err);
       setLikeErrorModalOpen(true);
     }
   };
+
 
   const renderLyrics = () =>
   song?.lyrics?.split("\n").map((line, idx) => (
