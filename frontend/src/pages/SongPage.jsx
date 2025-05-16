@@ -230,7 +230,8 @@ useEffect(() => {
     </p>
   ));
 const renderCreditsWithLinks = (text) => {
-  const regex = /@([\w\- ]+)/g;
+  const regex = /@([\w.\- ]+)/g;
+
 
   const lines = text.split("\n");
 
