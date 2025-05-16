@@ -251,7 +251,7 @@ const renderCreditsWithLinks = (text) => {
       }
 
       const artist = creditArtists.find((a) => a.name === name && a.data);
-      const slug = artist?.data?.slug || name.toLowerCase().replace(/\s+/g, "-");
+      const slug = artist?.data?.slug || name.trim().toLowerCase().replace(/\s+/g, "-");
 
       result.push(
         <Link
