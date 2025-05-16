@@ -11,10 +11,10 @@ exports.getAlbumDetail = (req, res) => {
     SELECT a.*, ar.name AS artist_name, ar.slug AS artist_slug
     FROM albums a
     JOIN artists ar ON a.artist_id = ar.id
-    WHERE a.slug = ?
+    WHERE a.slug = ? AND ar.slug = ?
   `;
 
-  db.query(albumQuery, [albumSlug], (err, results) => {
+  db.query(albumQuery, [albumSlug, artistSlug], (err, results) => {
     if (err) {
       console.error("앨범 조회 실패:", err);
       return res.status(500).json({ message: "DB 오류" });
