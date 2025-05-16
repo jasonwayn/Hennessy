@@ -422,11 +422,16 @@ const handleMentionSelect = (artist) => {
                             <div className="flex gap-2 items-center">
                               <button
                                 onClick={() => handleToggleLike(a.id)}
-                                className={`flex items-center gap-1 px-2 py-1 rounded-full border ${
-                                  a.liked ? "border-red-500 text-red-500" : "border-black text-black"
-                                } bg-white hover:bg-gray-50 transition`}
+                                className={`flex items-center gap-1 px-2 py-1 rounded-full border transition ${
+                                  a.liked ? "border-blue-500 text-blue-500" : "border-gray-400 text-gray-700"
+                                } hover:bg-gray-50`}
                               >
-                                <Heart className="w-4 h-4" strokeWidth={2} fill={a.liked ? "#ef4444" : "white"} />
+                                <Heart
+                                  className="w-4 h-4"
+                                  strokeWidth={2}
+                                  stroke={a.liked ? "#3b82f6" : "currentColor"} // tailwind 'blue-500'
+                                  fill={a.liked ? "#3b82f6" : "white"}           // 내부 채움 여부
+                                />
                                 <span className="text-sm">{a.likes}</span>
                               </button>
 
