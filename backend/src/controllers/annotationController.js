@@ -97,8 +97,10 @@ exports.createAnnotationFromLine = (req, res) => {
 };
 
 // 주석 조회 (line 문자열 기반)
+// 수정 후 - 로그인 여부 따라 liked 필드 포함
 exports.getAnnotationByLine = (req, res) => {
   const { song_id, line } = req.query;
+  const userEmail = req.user?.email || null; // 로그인 안 했으면 null
 
   if (!song_id || !line) {
     return res.status(400).json({ message: "필수 파라미터 누락" });
@@ -118,31 +120,45 @@ exports.getAnnotationByLine = (req, res) => {
       return res.status(404).json({ message: "문장을 가사에서 찾을 수 없음" });
     }
 
-    const query = `
-      SELECT 
-        a.*, 
-        a.user_id,
-        u.nickname,
-        u.email AS user_email,
-        u.profile_image_url,
-        u.id AS user_id,
-        (
-          SELECT COUNT(*) 
-          FROM annotation_likes 
-          WHERE annotation_id = a.id
-        ) AS likes
-      FROM song_annotations a
-      JOIN users u ON a.user_id = u.id
-      WHERE a.song_id = ? AND a.start_char = ? AND a.end_char = ?
-      ORDER BY a.type, likes DESC, a.created_at DESC
-    `;
+    // 로그인한 사용자 ID 조회 (없으면 null)
+    if (!userEmail) return queryAndRespond(null); // 비로그인 상태
 
-    db.query(query, [song_id, start_char, end_char], (err2, results2) => {
-      if (err2) return res.status(500).json({ message: "DB 오류" });
-      res.json(results2);
+    db.query("SELECT id FROM users WHERE email = ?", [userEmail], (err2, userResults) => {
+      const userId = userResults.length > 0 ? userResults[0].id : null;
+      queryAndRespond(userId);
     });
+
+    function queryAndRespond(userId) {
+      const query = `
+        SELECT 
+          a.*, 
+          a.user_id,
+          u.nickname,
+          u.email AS user_email,
+          u.profile_image_url,
+          (
+            SELECT COUNT(*) FROM annotation_likes WHERE annotation_id = a.id
+          ) AS likes,
+          (
+            SELECT COUNT(*) FROM annotation_likes WHERE annotation_id = a.id AND user_id = ?
+          ) AS liked
+        FROM song_annotations a
+        JOIN users u ON a.user_id = u.id
+        WHERE a.song_id = ? AND a.start_char = ? AND a.end_char = ?
+        ORDER BY a.type, likes DESC, a.created_at DESC
+      `;
+
+      db.query(query, [userId, song_id, start_char, end_char], (err3, results3) => {
+        if (err3) return res.status(500).json({ message: "DB 오류" });
+
+        // liked 필드 Boolean으로 변환
+        const withLiked = results3.map(r => ({ ...r, liked: !!r.liked }));
+        res.json(withLiked);
+      });
+    }
   });
 };
+
 
 
 // 좋아요 toggle API
@@ -236,13 +252,13 @@ exports.deleteAnnotation = (req, res) => {
     [annotationId, userEmail],
     (err, results) => {
       if (err || results.length === 0) {
-        console.error("❌ 인증 실패 또는 주석 없음:", err);
+        console.error("인증 실패 또는 주석 없음:", err);
         return res.status(401).json({ message: "인증 실패 또는 주석 없음" });
       }
 
       const { user_id, author_id } = results[0];
       if (user_id !== author_id) {
-        console.warn("⛔️ 본인 아님:", user_id, author_id);
+        console.warn("본인 아님:", user_id, author_id);
         return res.status(403).json({ message: "본인의 주석만 삭제할 수 있습니다." });
       }
 
@@ -251,7 +267,7 @@ exports.deleteAnnotation = (req, res) => {
         [annotationId],
         (err2) => {
           if (err2) {
-            console.error("❌ DB 삭제 오류:", err2); // 여기에 추가
+            console.error("DB 삭제 오류:", err2); 
             return res.status(500).json({ message: "DB 오류" });
           }
           res.json({ message: "주석이 삭제되었습니다." });
