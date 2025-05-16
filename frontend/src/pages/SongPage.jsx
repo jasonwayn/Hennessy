@@ -232,8 +232,7 @@ useEffect(() => {
 
 const renderCreditsWithLinks = (text) => {
   // @로 시작해서 공백 전까지 모든 글자(하이픈 포함) 인식
-  const regex = /(@[^\s@:\n]+)/g;
-
+  const regex = /@([\w\- ]+)/g;
   const lines = text.split("\n"); // 줄바꿈 기준으로 분리
 
   return lines.flatMap((line, lineIndex) => {
