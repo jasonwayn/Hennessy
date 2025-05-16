@@ -251,9 +251,6 @@ const fetchReviews = async () => {
         </div>
         <div className="flex-1">
           <h1 className="text-3xl font-bold mb-2">{album.title}</h1>
-          <p className="text-gray-600 mb-1">
-            아티스트: <Link to={`/artist/${album.artist_slug}`} className="text-blue-600 hover:underline">{album.artist_name}</Link>
-          </p>
             <p className="text-gray-600 mb-1">
               아티스트:{" "}
               {album.collaborators?.map((a, idx) => (
