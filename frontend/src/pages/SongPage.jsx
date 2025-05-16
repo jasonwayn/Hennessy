@@ -426,12 +426,9 @@ const handleMentionSelect = (artist) => {
                                   a.liked ? "border-blue-500 text-blue-500" : "border-gray-400 text-gray-700"
                                 } hover:bg-gray-50`}
                               >
-                                <Heart
-                                  className="w-4 h-4"
-                                  strokeWidth={2}
-                                  stroke={a.liked ? "#3b82f6" : "currentColor"}
-                                  fill={a.liked ? "#3b82f6" : "white"}
-                                />
+                                  <Heart
+                                    className={`w-4 h-4 ${a.liked ? "text-blue-500 fill-blue-500" : "text-gray-400 fill-white"}`}
+                                  />
                                 <span className="text-sm">{a.likes}</span>
                               </button>
 
